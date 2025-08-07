@@ -6,10 +6,10 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { SlackClient } from "./client.js";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { SlackClient } from "./client.js";
 
 interface AddReactionArgs {
   channel_id: string;
@@ -108,6 +108,17 @@ export class SlackMcpServer {
   }
 
   /**
+   * Creates a standardized response for tool execution
+   * 
+   * @private
+   * @param {any} response - The response data from Slack API
+   * @returns {Object} Standardized MCP response format
+   */
+  private createResponse(response: any): any {
+    return { content: [{ type: "text", text: JSON.stringify(response) }] };
+  }
+
+  /**
    * Tool definition for editing existing messages
    * 
    * @private
@@ -122,22 +133,11 @@ export class SlackMcpServer {
         properties: {
           channel_id: { type: "string", description: "The ID of the channel containing the message" },
           timestamp: { type: "string", description: "The timestamp of the message to edit" },
-          text: { type: "string", description: "The new message text" },
+          text: { type: "string", description: "The message text to edit" },
         },
         required: ["channel_id", "timestamp", "text"],
       },
     };
-  }
-
-  /**
-   * Creates a standardized response for tool execution
-   * 
-   * @private
-   * @param {any} response - The response data from Slack API
-   * @returns {Object} Standardized MCP response format
-   */
-  private createResponse(response: any): any {
-    return { content: [{ type: "text", text: JSON.stringify(response) }] };
   }
 
   /**
@@ -486,7 +486,7 @@ export class SlackMcpServer {
         properties: {
           channel_id: { type: "string", description: "The ID of the channel containing the thread" },
           thread_ts: { type: "string", description: "The timestamp of the parent message in the format '1234567890.123456'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it." },
-          text: { type: "string", description: "The reply text" },
+          text: { type: "string", description: "The reply text to post" },
           broadcast: { type: "boolean", description: "Whether to also send the reply to the main channel (default: false)", default: false },
         },
         required: ["channel_id", "thread_ts", "text"],

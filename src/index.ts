@@ -15,6 +15,9 @@ import { SlackMcpServer } from "./server/mcp.js";
 
 /**
  * Sets up global error handlers to prevent crashes
+ * 
+ * Configures process-level error handling for uncaught exceptions and
+ * unhandled promise rejections, with special handling for EPIPE errors.
  */
 function setupGlobalErrorHandlers(): void {
   process.on('uncaughtException', (error) => {
@@ -26,11 +29,10 @@ function setupGlobalErrorHandlers(): void {
     console.error('Fatal error:', error);
     process.exit(1);
   });
-
   process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled rejection at:', promise, 'reason:', reason);
-    if (reason && typeof reason === 'object' && 
-        ((reason as any).code === 'EPIPE' || (reason as Error).message?.includes('EPIPE'))) {
+    if (reason && typeof reason === 'object' &&
+      ((reason as any).code === 'EPIPE' || (reason as Error).message?.includes('EPIPE'))) {
       console.error('EPIPE rejection caught - continuing operation');
       return;
     }
@@ -48,9 +50,7 @@ function setupGlobalErrorHandlers(): void {
  * @throws {Error} When required environment variables are missing or server initialization fails
  */
 async function main(): Promise<void> {
-  // Set up error handlers first
   setupGlobalErrorHandlers();
-  
   const botToken = process.env.SLACK_BOT_TOKEN;
   const teamId = process.env.SLACK_TEAM_ID;
   if (!botToken || !teamId) {
@@ -59,21 +59,15 @@ async function main(): Promise<void> {
     );
     process.exit(1);
   }
-
   console.error("Starting Slack MCP Server...");
   const slackServer = new SlackMcpServer(botToken);
-
-  // Connect MCP transport first
   const transport = new StdioServerTransport();
-  
   try {
     await slackServer.connect(transport);
     console.error("Slack MCP Server running on stdio");
   } catch (error) {
     console.error("Failed to connect MCP transport:", error);
-    // Don't exit on transport errors - try to continue
   }
-
   console.error("Slack MCP Server running on stdio");
 }
 

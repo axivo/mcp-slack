@@ -38,46 +38,6 @@ export class SlackClient {
   }
 
   /**
-   * Gets cached user data or fetches from Slack API
-   * 
-   * @private
-   * @returns {Promise<Map<string, any>>} Map of display names to user data
-   */
-  private async getCachedUsers(): Promise<Map<string, any>> {
-    const now = Date.now();
-    if (this.userCache.size > 0 && now < this.cacheExpiry) {
-      return this.userCache;
-    }
-    try {
-      const response = await this.getUsers(200);
-      if (response.ok && response.members) {
-        this.userCache.clear();
-        for (const user of response.members) {
-          if (!user.deleted) {
-            const realName = user.real_name?.toLowerCase();
-            const displayName = user.profile?.display_name?.toLowerCase();
-            const username = user.name?.toLowerCase();
-            
-            if (realName) {
-              this.userCache.set(realName, user);
-            }
-            if (displayName && displayName !== realName) {
-              this.userCache.set(displayName, user);
-            }
-            if (username) {
-              this.userCache.set(username, user);
-            }
-          }
-        }
-        this.cacheExpiry = now + this.CACHE_DURATION;
-      }
-    } catch (error) {
-      console.warn('Failed to cache users for mention resolution:', error);
-    }
-    return this.userCache;
-  }
-
-  /**
    * Checks and enforces rate limiting for API endpoints
    * 
    * @private
@@ -99,6 +59,75 @@ export class SlackClient {
       }
     }
     return true;
+  }
+
+  /**
+   * Gets cached user data or fetches from Slack API
+   * 
+   * @private
+   * @returns {Promise<Map<string, any>>} Map of display names to user data
+   */
+  private async getCachedUsers(): Promise<Map<string, any>> {
+    const now = Date.now();
+    if (this.userCache.size > 0 && now < this.cacheExpiry) {
+      return this.userCache;
+    }
+    try {
+      const response = await this.getUsers(200);
+      if (response.ok && response.members) {
+        this.userCache.clear();
+        for (const user of response.members) {
+          if (!user.deleted) {
+            const realName = user.real_name?.toLowerCase();
+            const displayName = user.profile?.display_name?.toLowerCase();
+            const username = user.name?.toLowerCase();
+            if (realName) {
+              this.userCache.set(realName, user);
+            }
+            if (displayName && displayName !== realName) {
+              this.userCache.set(displayName, user);
+            }
+            if (username) {
+              this.userCache.set(username, user);
+            }
+          }
+        }
+        this.cacheExpiry = now + this.CACHE_DURATION;
+      }
+    } catch (error) {
+      console.warn('Failed to cache users for mention resolution:', error);
+    }
+    return this.userCache;
+  }
+
+  /**
+   * Resolves display name mentions to username mentions
+   * 
+   * @private
+   * @param {string} text - Text content containing potential mentions
+   * @returns {Promise<string>} Text with resolved mentions
+   */
+  private async resolveMentions(text: string): Promise<string> {
+    const mentionRegex = /@([A-Za-z][A-Za-z\s]*[A-Za-z]|[A-Za-z])/g;
+    const matches = text.match(mentionRegex);
+    if (!matches) {
+      return text;
+    }
+    try {
+      const userCache = await this.getCachedUsers();
+      let resolvedText = text;
+      for (const match of matches) {
+        const displayName = match.substring(1).toLowerCase().trim();
+        const user = userCache.get(displayName);
+        if (user && user.name) {
+          resolvedText = resolvedText.replace(match, `@${user.name}`);
+        }
+      }
+      return resolvedText;
+    } catch (error) {
+      console.warn('Failed to resolve mentions, using original text:', error);
+      return text;
+    }
   }
 
   /**
@@ -153,36 +182,6 @@ export class SlackClient {
         }
         throw error;
       }
-    }
-  }
-
-  /**
-   * Resolves display name mentions to username mentions
-   * 
-   * @private
-   * @param {string} text - Text content containing potential mentions
-   * @returns {Promise<string>} Text with resolved mentions
-   */
-  private async resolveMentions(text: string): Promise<string> {
-    const mentionRegex = /@([A-Za-z][A-Za-z\s]*[A-Za-z]|[A-Za-z])/g;
-    const matches = text.match(mentionRegex);
-    if (!matches) {
-      return text;
-    }
-    try {
-      const userCache = await this.getCachedUsers();
-      let resolvedText = text;
-      for (const match of matches) {
-        const displayName = match.substring(1).toLowerCase().trim();
-        const user = userCache.get(displayName);
-        if (user && user.name) {
-          resolvedText = resolvedText.replace(match, `@${user.name}`);
-        }
-      }
-      return resolvedText;
-    } catch (error) {
-      console.warn('Failed to resolve mentions, using original text:', error);
-      return text;
     }
   }
 
