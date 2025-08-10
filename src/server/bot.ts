@@ -1,3 +1,4 @@
+import { query } from '@anthropic-ai/claude-code';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SocketModeClient } from '@slack/socket-mode';
@@ -23,6 +24,8 @@ interface SlackEvent {
   envelope_id?: string;
 }
 
+
+
 /**
  * Universal MCP interface via Slack bot
  * 
@@ -45,29 +48,6 @@ export class SlackBot {
   }
 
   /**
-   * Shuts down all connections and performs cleanup
-   * 
-   * @returns {Promise<void>} Promise that resolves when cleanup is complete
-   */
-  async cleanup(): Promise<void> {
-    console.error('Shutting down SlackBot...');
-    try {
-      await this.socketClient.disconnect();
-    } catch (error) {
-      console.error('Error disconnecting socket client:', error);
-    }
-    for (const [name, client] of this.mcpClients.entries()) {
-      try {
-        await client.close();
-        console.error(`Disconnected from ${name}`);
-      } catch (error) {
-        console.error(`Error disconnecting ${name}:`, error);
-      }
-    }
-    this.mcpClients.clear();
-  }
-
-  /**
    * Handles incoming Slack messages by forwarding to MCP servers
    * 
    * @param {SlackEvent} event - Slack event data
@@ -77,11 +57,24 @@ export class SlackBot {
     if (!event.text || !event.channel || !event.user) {
       return;
     }
-    const response = `Received: ${event.text}`;
-    if (event.thread_ts) {
-      await this.slackClient.postReply(event.channel, event.thread_ts, response);
-    } else {
-      await this.slackClient.postMessage(event.channel, response);
+    const cleanText = event.text.replace(/<@U\w+>/g, '').trim();
+    if (!cleanText) {
+      return;
+    }
+    try {
+      const response = await this.processMessage(cleanText, event.channel, event.user);
+      if (event.thread_ts) {
+        await this.slackClient.postReply(event.channel, event.thread_ts, response);
+      } else {
+        await this.slackClient.postMessage(event.channel, response);
+      }
+    } catch (error) {
+      const errorMessage = `Error processing message: ${error instanceof Error ? error.message : String(error)}`;
+      if (event.thread_ts) {
+        await this.slackClient.postReply(event.channel, event.thread_ts, errorMessage);
+      } else {
+        await this.slackClient.postMessage(event.channel, errorMessage);
+      }
     }
   }
 
@@ -129,17 +122,31 @@ export class SlackBot {
   }
 
   /**
+   * Processes user message through Claude Code with MCP tool access
+   * 
+   * @param {string} message - Clean user message
+   * @param {string} channel - Slack channel ID
+   * @param {string} user - Slack user ID
+   * @returns {Promise<string>} Response message
+   */
+  private async processMessage(message: string, channel: string, user: string): Promise<string> {
+    try {
+      for await (const response of query({ prompt: message })) {
+        if (typeof response === 'string') return response;
+        return JSON.stringify(response, null, 2);
+      }
+      return 'No response from Claude';
+    } catch (error) {
+      return `Error: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
+  /**
    * Sets up Socket Mode event handlers
    * 
    * @returns {void}
    */
   private setupEventHandlers(): void {
-    this.socketClient.on('message', async ({ body, ack }) => {
-      await ack();
-      if (body.event) {
-        await this.handleMessage(body.event);
-      }
-    });
     this.socketClient.on('app_mention', async ({ body, ack }) => {
       await ack();
       if (body.event) {
@@ -165,6 +172,29 @@ export class SlackBot {
   }
 
   /**
+   * Shuts down all connections and performs cleanup
+   * 
+   * @returns {Promise<void>} Promise that resolves when cleanup is complete
+   */
+  async cleanup(): Promise<void> {
+    console.error('Shutting down SlackBot...');
+    try {
+      await this.socketClient.disconnect();
+    } catch (error) {
+      console.error('Error disconnecting socket client:', error);
+    }
+    for (const [name, client] of this.mcpClients.entries()) {
+      try {
+        await client.close();
+        console.error(`Disconnected from ${name}`);
+      } catch (error) {
+        console.error(`Error disconnecting ${name}:`, error);
+      }
+    }
+    this.mcpClients.clear();
+  }
+
+  /**
    * Starts the SlackBot and initializes all connections
    * 
    * @returns {Promise<void>} Promise that resolves when bot is ready
@@ -174,6 +204,6 @@ export class SlackBot {
     await this.initializeMCPClients();
     this.setupEventHandlers();
     await this.socketClient.start();
-    console.error('SlackBot active');
+    console.error(`SlackBot active with ${this.mcpClients.size} MCP servers connected`);
   }
 }
