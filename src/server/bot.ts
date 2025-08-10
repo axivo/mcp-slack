@@ -3,6 +3,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SocketModeClient } from '@slack/socket-mode';
 import { readFileSync } from 'fs';
+import { dirname } from 'path';
 import { SlackClient } from './client.js';
 
 interface MCPConfig {
@@ -23,8 +24,6 @@ interface SlackEvent {
   thread_ts?: string;
   envelope_id?: string;
 }
-
-
 
 /**
  * Universal MCP interface via Slack bot
@@ -54,6 +53,7 @@ export class SlackBot {
    * @returns {Promise<void>} Promise that resolves when message is processed
    */
   private async handleMessage(event: SlackEvent): Promise<void> {
+    console.error('handleMessage called with:', event.text);
     if (!event.text || !event.channel || !event.user) {
       return;
     }
@@ -61,6 +61,7 @@ export class SlackBot {
     if (!cleanText) {
       return;
     }
+    console.error('Clean text:', cleanText);
     try {
       const response = await this.processMessage(cleanText, event.channel, event.user);
       if (event.thread_ts) {
@@ -130,13 +131,17 @@ export class SlackBot {
    * @returns {Promise<string>} Response message
    */
   private async processMessage(message: string, channel: string, user: string): Promise<string> {
+    console.error('Processing message:', message);
     try {
       for await (const response of query({ prompt: message })) {
-        if (typeof response === 'string') return response;
-        return JSON.stringify(response, null, 2);
+        console.error('Claude response:', response);
+        if (response.type === 'result' && response.subtype === 'success') {
+          return response.result;
+        }
       }
       return 'No response from Claude';
     } catch (error) {
+      console.error('Error processing message:', error);
       return `Error: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
@@ -147,12 +152,22 @@ export class SlackBot {
    * @returns {void}
    */
   private setupEventHandlers(): void {
+    console.error('Setting up Socket Mode event handlers...');
     this.socketClient.on('app_mention', async ({ body, ack }) => {
+      console.error('Received app_mention event:', body.event);
       await ack();
       if (body.event) {
         await this.handleMessage(body.event);
       }
     });
+    this.socketClient.on('message', async ({ body, ack }) => {
+      console.error('Received message event:', body.event);
+      await ack();
+      if (body.event && body.event.channel_type === 'im') {
+        await this.handleMessage(body.event);
+      }
+    });
+    console.error('Event handlers set up complete');
   }
 
   /**
@@ -200,7 +215,14 @@ export class SlackBot {
    * @returns {Promise<void>} Promise that resolves when bot is ready
    */
   async start(): Promise<void> {
+    console.error('SlackBot starting with custom logic...');
     console.error('Initializing SlackBot...');
+    const mcpConfigPath = process.env.SLACK_BOT_FILE_PATH;
+    if (mcpConfigPath) {
+      const mcpDir = dirname(mcpConfigPath);
+      console.error(`Changing directory to: ${mcpDir}`);
+      process.chdir(mcpDir);
+    }
     await this.initializeMCPClients();
     this.setupEventHandlers();
     await this.socketClient.start();
