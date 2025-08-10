@@ -14,12 +14,16 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { SlackMcpServer } from "./server/mcp.js";
 
 /**
- * Sets up global error handlers to prevent crashes
+ * Main entry point for the Slack MCP Server
  * 
- * Configures process-level error handling for uncaught exceptions and
- * unhandled promise rejections, with special handling for EPIPE errors.
+ * Validates environment variables, initializes the SlackMcpServer,
+ * and establishes stdio transport for communication with Claude agents.
+ * 
+ * @async
+ * @function main
+ * @throws {Error} When required environment variables are missing or server initialization fails
  */
-function setupGlobalErrorHandlers(): void {
+async function main(): Promise<void> {
   process.on('uncaughtException', (error) => {
     console.error('Uncaught exception:', error.message);
     if (error.message.includes('EPIPE') || (error as any).code === 'EPIPE') {
@@ -37,26 +41,10 @@ function setupGlobalErrorHandlers(): void {
       return;
     }
   });
-}
-
-/**
- * Main entry point for the Slack MCP Server
- * 
- * Validates environment variables, initializes the SlackMcpServer,
- * and establishes stdio transport for communication with Claude agents.
- * 
- * @async
- * @function main
- * @throws {Error} When required environment variables are missing or server initialization fails
- */
-async function main(): Promise<void> {
-  setupGlobalErrorHandlers();
   const botToken = process.env.SLACK_BOT_TOKEN;
   const teamId = process.env.SLACK_TEAM_ID;
   if (!botToken || !teamId) {
-    console.error(
-      "Please set SLACK_BOT_TOKEN and SLACK_TEAM_ID environment variables",
-    );
+    console.error("Please set SLACK_BOT_TOKEN and SLACK_TEAM_ID environment variables");
     process.exit(1);
   }
   console.error("Starting Slack MCP Server...");
