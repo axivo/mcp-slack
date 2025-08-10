@@ -6,9 +6,6 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { readFileSync } from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
 import { SlackClient } from "./client.js";
 
 interface AddReactionArgs {
@@ -79,7 +76,7 @@ export class SlackMcpServer {
    */
   constructor(botToken: string) {
     this.slackClient = new SlackClient(botToken);
-    this.server = new Server({ name: "Slack MCP Server", version: this.getPackageVersion() }, { capabilities: { tools: {} } });
+    this.server = new Server({ name: "Slack MCP Server", version: this.slackClient.version() }, { capabilities: { tools: {} } });
     this.toolHandlers = new Map<string, ToolHandler>();
     this.setupToolHandlers();
     this.setupHandlers();
@@ -161,24 +158,7 @@ export class SlackMcpServer {
     };
   }
 
-  /**
-   * Get package version from package.json
-   * 
-   * @private
-   * @returns {string} Package version
-   * @throws {Error} When package.json cannot be read or parsed
-   */
-  private getPackageVersion(): string {
-    try {
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = dirname(__filename);
-      const packagePath = join(__dirname, '../../package.json');
-      const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
-      return packageJson.version;
-    } catch (error) {
-      throw new Error(`Failed to read package.json version: ${error}`);
-    }
-  }
+
 
   /**
    * Returns all available Slack tools

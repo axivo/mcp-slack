@@ -56,6 +56,16 @@ async function main(): Promise<void> {
   } catch (error) {
     console.error("Failed to connect MCP transport:", error);
   }
+  if (process.env.SLACK_APP_TOKEN) {
+    console.error("SLACK_APP_TOKEN detected, activating universal MCP interface...");
+    const { SlackBot } = await import('./server/bot.js');
+    const slackBot = new SlackBot(botToken, process.env.SLACK_APP_TOKEN);
+    process.on('SIGINT', async () => {
+      await slackBot.cleanup();
+      process.exit(0);
+    });
+    await slackBot.start();
+  }
   console.error("Slack MCP Server running on stdio");
 }
 

@@ -6,6 +6,10 @@
  * @license BSD-3-Clause
  */
 
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
 const slackApi = "https://slack.com/api";
 
 /**
@@ -484,5 +488,23 @@ export class SlackClient {
       body: JSON.stringify(body),
     });
     return response.json();
+  }
+
+  /**
+   * Gets package version
+   * 
+   * @returns {string} Package version
+   * @throws {Error} When package.json cannot be read or parsed
+   */
+  version(): string {
+    try {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
+      const packagePath = join(__dirname, '../../package.json');
+      const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
+      return packageJson.version;
+    } catch (error) {
+      throw new Error(`Failed to read package.json version: ${error}`);
+    }
   }
 }
