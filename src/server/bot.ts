@@ -133,8 +133,9 @@ export class SlackBot {
   private async processMessage(message: string, channel: string, user: string): Promise<string> {
     console.error('Processing message:', message);
     try {
+      const messages = [];
       for await (const response of query({ prompt: message })) {
-        console.error('Claude response:', response);
+        messages.push(response);
         if (response.type === 'result' && response.subtype === 'success') {
           return response.result;
         }
