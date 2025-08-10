@@ -1,9 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SocketModeClient } from '@slack/socket-mode';
-import { accessSync, readFileSync } from 'fs';
-import { homedir } from 'os';
-import { resolve } from 'path';
+import { readFileSync } from 'fs';
 import { SlackClient } from './client.js';
 
 interface MCPConfig {
@@ -108,7 +106,6 @@ export class SlackBot {
         });
         await client.connect(transport);
         this.mcpClients.set(serverName, client);
-        console.error(`Connected to ${serverName}`);
       }
     } catch (error) {
       console.error(`MCP configuration error: ${error instanceof Error ? error.message : String(error)}`);
@@ -117,29 +114,18 @@ export class SlackBot {
   }
 
   /**
-   * Loads MCP configuration from standard locations
+   * Loads MCP configuration from environment variable
    * 
    * @returns {MCPConfig} Parsed MCP configuration
-   * @throws {Error} When no configuration file is found or parsing fails
+   * @throws {Error} When SLACK_BOT_FILE_PATH is not set or file cannot be read
    */
   private loadMCPConfig(): MCPConfig {
-    const configPaths = [
-      './.mcp.json',
-      resolve(homedir(), '.claude/mcp.json'),
-      resolve(homedir(), '.claude.json'),
-      resolve(homedir(), '.claude/settings.json')
-    ];
-    for (const path of configPaths) {
-      try {
-        accessSync(path);
-        console.error(`Found MCP config: ${path}`);
-        const content = readFileSync(path, 'utf8');
-        return JSON.parse(content);
-      } catch {
-        continue;
-      }
+    const envPath = process.env.SLACK_BOT_FILE_PATH;
+    if (!envPath) {
+      throw new Error('Please set SLACK_BOT_FILE_PATH environment variable');
     }
-    throw new Error('No MCP configuration found in standard locations');
+    const content = readFileSync(envPath, 'utf8');
+    return JSON.parse(content);
   }
 
   /**
@@ -169,6 +155,7 @@ export class SlackBot {
    * @returns {Record<string, string>} Environment variables with substituted values
    */
   private substituteEnvVars(env: Record<string, string>): Record<string, string> {
+    if (!env) return {};
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
       result[key] = value.replace(/\$\{(\w+)\}/g, (_, varName) =>

@@ -10,7 +10,7 @@ import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-const slackApi = "https://slack.com/api";
+const slackApi = 'https://slack.com/api';
 
 /**
  * Slack API client
@@ -37,7 +37,7 @@ export class SlackClient {
   constructor(botToken: string) {
     this.botHeaders = {
       Authorization: `Bearer ${botToken}`,
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     };
   }
 
@@ -205,7 +205,7 @@ export class SlackClient {
     this.checkRateLimit('addReaction');
     const sanitizedReaction = reaction.replace(/[^a-zA-Z0-9_]/g, '');
     const response = await fetch(`${slackApi}/reactions.add`, {
-      method: "POST",
+      method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
@@ -233,7 +233,7 @@ export class SlackClient {
     const sanitizedText = await this.sanitizeText(text);
     this.validateUrls(sanitizedText);
     const response = await fetch(`${slackApi}/chat.update`, {
-      method: "POST",
+      method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
@@ -306,8 +306,8 @@ export class SlackClient {
     const predefinedChannelIds = process.env.SLACK_CHANNEL_IDS;
     if (!predefinedChannelIds) {
       const params = new URLSearchParams({
-        types: "public_channel",
-        exclude_archived: "true",
+        types: 'public_channel',
+        exclude_archived: 'true',
         limit: Math.min(limit, 200).toString(),
         team_id: process.env.SLACK_TEAM_ID!,
       });
@@ -320,7 +320,7 @@ export class SlackClient {
       );
       return response.json();
     }
-    const predefinedChannelIdsArray = predefinedChannelIds.split(",").map((id: string) => id.trim());
+    const predefinedChannelIdsArray = predefinedChannelIds.split(',').map((id: string) => id.trim());
     const channels = [];
     for (const channelId of predefinedChannelIdsArray) {
       const params = new URLSearchParams({
@@ -338,7 +338,7 @@ export class SlackClient {
     return {
       ok: true,
       channels: channels,
-      response_metadata: { next_cursor: "" },
+      response_metadata: { next_cursor: '' },
     };
   }
 
@@ -391,7 +391,7 @@ export class SlackClient {
     this.checkRateLimit('getUserProfile');
     const params = new URLSearchParams({
       user: user_id,
-      include_labels: "true",
+      include_labels: 'true',
     });
     const response = await fetch(
       `${slackApi}/users.profile.get?${params}`,
@@ -434,7 +434,7 @@ export class SlackClient {
     const sanitizedText = await this.sanitizeText(text);
     this.validateUrls(sanitizedText);
     const response = await fetch(`${slackApi}/chat.postMessage`, {
-      method: "POST",
+      method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
@@ -483,7 +483,7 @@ export class SlackClient {
       body.reply_broadcast = true;
     }
     const response = await fetch(`${slackApi}/chat.postMessage`, {
-      method: "POST",
+      method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify(body),
     });

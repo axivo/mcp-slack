@@ -10,8 +10,8 @@
  * @license BSD-3-Clause
  */
 
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { SlackMcpServer } from "./server/mcp.js";
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SlackMcpServer } from './server/mcp.js';
 
 /**
  * Main entry point for the Slack MCP Server
@@ -44,20 +44,23 @@ async function main(): Promise<void> {
   const botToken = process.env.SLACK_BOT_TOKEN;
   const teamId = process.env.SLACK_TEAM_ID;
   if (!botToken || !teamId) {
-    console.error("Please set SLACK_BOT_TOKEN and SLACK_TEAM_ID environment variables");
+    console.error('Please set SLACK_BOT_TOKEN and SLACK_TEAM_ID environment variables');
     process.exit(1);
   }
-  console.error("Starting Slack MCP Server...");
+  console.error('Starting Slack MCP Server...');
   const slackServer = new SlackMcpServer(botToken);
   const transport = new StdioServerTransport();
   try {
     await slackServer.connect(transport);
-    console.error("Slack MCP Server running on stdio");
   } catch (error) {
-    console.error("Failed to connect MCP transport:", error);
+    console.error('Failed to connect MCP transport:', error);
   }
   if (process.env.SLACK_APP_TOKEN) {
-    console.error("SLACK_APP_TOKEN detected, activating universal MCP interface...");
+    if (!process.env.SLACK_BOT_FILE_PATH) {
+      console.error('Please set SLACK_BOT_FILE_PATH environment variable');
+      process.exit(1);
+    }
+    console.error('Activating universal MCP interface...');
     const { SlackBot } = await import('./server/bot.js');
     const slackBot = new SlackBot(botToken, process.env.SLACK_APP_TOKEN);
     process.on('SIGINT', async () => {
@@ -66,10 +69,10 @@ async function main(): Promise<void> {
     });
     await slackBot.start();
   }
-  console.error("Slack MCP Server running on stdio");
+  console.error('Slack MCP Server running on stdio');
 }
 
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
+  console.error('Fatal error in main():', error);
   process.exit(1);
 });
