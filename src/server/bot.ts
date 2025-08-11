@@ -53,7 +53,6 @@ export class SlackBot {
    * @returns {Promise<void>} Promise that resolves when message is processed
    */
   private async handleMessage(event: SlackEvent): Promise<void> {
-    console.error('handleMessage called with:', event.text);
     if (!event.text || !event.channel || !event.user) {
       return;
     }
@@ -61,7 +60,6 @@ export class SlackBot {
     if (!cleanText) {
       return;
     }
-    console.error('Clean text:', cleanText);
     try {
       const response = await this.processMessage(cleanText, event.channel, event.user);
       if (event.thread_ts) {
@@ -96,14 +94,14 @@ export class SlackBot {
         const transport = new StdioClientTransport({
           command: serverConfig.command,
           args: serverConfig.args,
-          env: this.substituteEnvVars(serverConfig.env)
+          env: this.substituteEnvVars(serverConfig.env),
+          stderr: 'ignore'
         });
         await client.connect(transport);
         this.mcpClients.set(serverName, client);
       }
     } catch (error) {
       console.error(`MCP configuration error: ${error instanceof Error ? error.message : String(error)}`);
-      console.error('SlackBot will operate in Slack-only mode');
     }
   }
 
@@ -111,12 +109,12 @@ export class SlackBot {
    * Loads MCP configuration from environment variable
    * 
    * @returns {MCPConfig} Parsed MCP configuration
-   * @throws {Error} When SLACK_BOT_FILE_PATH is not set or file cannot be read
+   * @throws {Error} When SLACK_MCP_FILE_PATH is not set or file cannot be read
    */
   private loadMCPConfig(): MCPConfig {
-    const envPath = process.env.SLACK_BOT_FILE_PATH;
+    const envPath = process.env.SLACK_MCP_FILE_PATH;
     if (!envPath) {
-      throw new Error('Please set SLACK_BOT_FILE_PATH environment variable');
+      throw new Error('Please set SLACK_MCP_FILE_PATH environment variable');
     }
     const content = readFileSync(envPath, 'utf8');
     return JSON.parse(content);
@@ -131,7 +129,6 @@ export class SlackBot {
    * @returns {Promise<string>} Response message
    */
   private async processMessage(message: string, channel: string, user: string): Promise<string> {
-    console.error('Processing message:', message);
     try {
       const messages = [];
       for await (const response of query({ prompt: message })) {
@@ -140,7 +137,7 @@ export class SlackBot {
           return response.result;
         }
       }
-      return 'No response from Claude';
+      return 'Processing error, try again.';
     } catch (error) {
       console.error('Error processing message:', error);
       return `Error: ${error instanceof Error ? error.message : String(error)}`;
@@ -153,22 +150,18 @@ export class SlackBot {
    * @returns {void}
    */
   private setupEventHandlers(): void {
-    console.error('Setting up Socket Mode event handlers...');
     this.socketClient.on('app_mention', async ({ body, ack }) => {
-      console.error('Received app_mention event:', body.event);
       await ack();
       if (body.event) {
         await this.handleMessage(body.event);
       }
     });
     this.socketClient.on('message', async ({ body, ack }) => {
-      console.error('Received message event:', body.event);
       await ack();
       if (body.event && body.event.channel_type === 'im') {
         await this.handleMessage(body.event);
       }
     });
-    console.error('Event handlers set up complete');
   }
 
   /**
@@ -193,7 +186,6 @@ export class SlackBot {
    * @returns {Promise<void>} Promise that resolves when cleanup is complete
    */
   async cleanup(): Promise<void> {
-    console.error('Shutting down SlackBot...');
     try {
       await this.socketClient.disconnect();
     } catch (error) {
@@ -202,7 +194,6 @@ export class SlackBot {
     for (const [name, client] of this.mcpClients.entries()) {
       try {
         await client.close();
-        console.error(`Disconnected from ${name}`);
       } catch (error) {
         console.error(`Error disconnecting ${name}:`, error);
       }
@@ -216,17 +207,20 @@ export class SlackBot {
    * @returns {Promise<void>} Promise that resolves when bot is ready
    */
   async start(): Promise<void> {
-    console.error('SlackBot starting with custom logic...');
-    console.error('Initializing SlackBot...');
-    const mcpConfigPath = process.env.SLACK_BOT_FILE_PATH;
+    const mcpConfigPath = process.env.SLACK_MCP_FILE_PATH;
     if (mcpConfigPath) {
       const mcpDir = dirname(mcpConfigPath);
-      console.error(`Changing directory to: ${mcpDir}`);
       process.chdir(mcpDir);
     }
     await this.initializeMCPClients();
     this.setupEventHandlers();
     await this.socketClient.start();
-    console.error(`SlackBot active with ${this.mcpClients.size} MCP servers connected`);
+    try {
+      for await (const response of query({ prompt: "status" })) {
+        if (response.type === 'result') break;
+      }
+    } catch (error) {
+      console.error('Claude Code initialization failed:', error);
+    }
   }
 }

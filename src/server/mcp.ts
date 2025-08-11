@@ -347,7 +347,6 @@ export class SlackMcpServer {
    * @returns {Promise<Object>} Response containing available tools
    */
   private async handleListTools(): Promise<any> {
-    console.error('Received ListToolsRequest');
     return { tools: this.getSlackTools() };
   }
 
@@ -389,7 +388,6 @@ export class SlackMcpServer {
    * @returns {Promise<Object>} Response containing tool execution results
    */
   private async handleRequest(request: CallToolRequest): Promise<any> {
-    console.error('Received CallToolRequest:', request);
     try {
       if (!request.params.arguments) {
         throw new Error('No arguments provided');
@@ -514,11 +512,7 @@ export class SlackMcpServer {
    * @returns {Promise<void>} Promise that resolves when connection is established
    */
   async connect(transport: StdioServerTransport): Promise<void> {
-    console.error('Connecting server to transport...');
     this.transport = transport;
-    transport.onclose = () => {
-      console.error('Transport closed');
-    };
     transport.onerror = (error: Error) => {
       console.error('Transport error:', error.message);
     };
