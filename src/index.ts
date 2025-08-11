@@ -54,19 +54,6 @@ async function main(): Promise<void> {
   } catch (error) {
     console.error('Failed to connect MCP transport:', error);
   }
-  if (process.env.SLACK_APP_TOKEN) {
-    if (!process.env.SLACK_MCP_FILE_PATH) {
-      console.error('Please set SLACK_MCP_FILE_PATH environment variable');
-      process.exit(1);
-    }
-    const { SlackBot } = await import('./server/bot.js');
-    const slackBot = new SlackBot(botToken, process.env.SLACK_APP_TOKEN);
-    process.on('SIGINT', async () => {
-      await slackBot.cleanup();
-      process.exit(0);
-    });
-    await slackBot.start();
-  }
 }
 
 main().catch((error) => {

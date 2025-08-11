@@ -19,10 +19,7 @@
   "author": "AXIVO",
   "license": "BSD-3-Clause",
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.0",
-    "@modelcontextprotocol/sdk": "^1.17.0",
-    "@slack/socket-mode": "^2.0.0",
-    "@slack/web-api": "^7.9.0"
+    "@modelcontextprotocol/sdk": "^1.17.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

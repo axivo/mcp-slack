@@ -1,3 +1,11 @@
+/**
+ * Slack MCP Server implementation
+ * 
+ * @module server/mcp
+ * @author AXIVO
+ * @license BSD-3-Clause
+ */
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -157,8 +165,6 @@ export class SlackMcpServer {
       },
     };
   }
-
-
 
   /**
    * Returns all available Slack tools
