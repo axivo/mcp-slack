@@ -24,6 +24,9 @@
     ":semanticCommitTypeAll(chore)",
     "config:recommended"
   ],
+  "ignorePaths": [
+    "package-lock.json"
+  ],
   "labels": [
     "dependency"
   ],
