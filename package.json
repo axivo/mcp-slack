@@ -1,21 +1,17 @@
 {
   "name": "@axivo/mcp-slack",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A secure Slack MCP server with enhanced security features",
   "main": "dist/index.js",
+  "bin": {
+    "mcp-slack": "dist/index.js"
+  },
   "type": "module",
   "files": [
     "dist/**/*",
     "README.md",
     "LICENSE"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/axivo/mcp-slack.git"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
@@ -27,16 +23,23 @@
     "model-context-protocol",
     "claude"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/axivo/mcp-slack.git"
+  },
   "author": "AXIVO",
   "license": "BSD-3-Clause",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": ">=5.0.0"
-  },
-  "engines": {
-    "node": ">=24.0.0"
   }
 }
