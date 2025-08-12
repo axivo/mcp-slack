@@ -6,7 +6,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "datasourceTemplate": "github-releases",
+      "datasourceTemplate": "node-version",
       "depNameTemplate": "node",
       "managerFilePatterns": [
         ".github/workflows/package.yml"
@@ -14,7 +14,6 @@
       "matchStrings": [
         "with:[\\s\\r]+?node-version:\\s+(?<currentValue>.+)"
       ],
-      "packageNameTemplate": "actions/node-versions",
       "versioningTemplate": "node"
     }
   ],
@@ -25,6 +24,9 @@
     ":semanticCommitTypeAll(chore)",
     "config:recommended"
   ],
+  "ignorePaths": [
+    "package-lock.json"
+  ],
   "labels": [
     "dependency"
   ],
@@ -32,7 +34,7 @@
     {
       "enabled": true,
       "matchDatasources": [
-        "github-releases"
+        "node-version"
       ],
       "matchDepNames": [
         "node"
