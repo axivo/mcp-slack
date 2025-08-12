@@ -29,6 +29,12 @@
   ],
   "packageRules": [
     {
+      "enabled": false,
+      "matchFileNames": [
+        "package-lock.json"
+      ]
+    },
+    {
       "enabled": true,
       "matchDatasources": [
         "node-version"
@@ -38,13 +44,13 @@
       ],
       "matchUpdateTypes": [
         "major"
-      ]
+      ],
+      "versioning": "node-latest"
     }
   ],
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
   "semanticCommits": "enabled",
   "separateMajorMinor": false,
-  "separateMinorPatch": false,
-  "updateLockFiles": false
+  "separateMinorPatch": false
 }
