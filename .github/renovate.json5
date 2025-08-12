@@ -24,9 +24,6 @@
     ":semanticCommitTypeAll(chore)",
     "config:recommended"
   ],
-  "ignorePaths": [
-    "package-lock.json"
-  ],
   "labels": [
     "dependency"
   ],
@@ -48,5 +45,6 @@
   "prHourlyLimit": 0,
   "semanticCommits": "enabled",
   "separateMajorMinor": false,
-  "separateMinorPatch": false
+  "separateMinorPatch": false,
+  "updateLockFiles": false
 }
