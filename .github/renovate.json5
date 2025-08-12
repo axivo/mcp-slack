@@ -44,8 +44,7 @@
       ],
       "matchUpdateTypes": [
         "major"
-      ],
-      "versioning": "node-latest"
+      ]
     }
   ],
   "prConcurrentLimit": 0,
