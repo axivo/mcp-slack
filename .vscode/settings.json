@@ -18,13 +18,28 @@
     "files.trimFinalNewlines": true,
     "files.trimTrailingWhitespace": true
   },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  },
+  "[yaml]": {
+    "editor.autoIndent": "keep",
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.trimTrailingWhitespace": true,
+  },
   "editor.formatOnSave": true,
   "editor.rulers": [
     120
   ],
   "editor.showUnused": true,
   "files.associations": {
-    "*.ts": "typescript"
+    "**/renovate.json5": "jsonc",
+    "**/*.ts": "typescript"
   },
   "files.exclude": {
     "**/.git": true,
