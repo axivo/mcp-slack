@@ -11,13 +11,6 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const slackApi = 'https://slack.com/api';
-const suspiciousDomains = [
-  'bit.ly',
-  'goo.gl',
-  'ngrok.com',
-  'ngrok.io',
-  'tinyurl.com'
-];
 
 /**
  * Slack API client
@@ -70,33 +63,6 @@ export class SlackClient {
       }
     }
     return true;
-  }
-
-  /**
-   * Converts GitHub Flavored Markdown to Slack mrkdwn format
-   * 
-   * @private
-   * @param {string} text - Text content with GitHub markdown formatting
-   * @returns {string} Text converted to Slack mrkdwn format
-   */
-  private formatText(text: string): string {
-    return text
-      .replace(/^#{1,6}\s+(.+)$/gm, '*$1*')
-      .replace(/\*\*(.*?)\*\*/g, '*$1*')
-      .replace(/__(.*?)__/g, '*$1*')
-      .replace(/(?<!\*)\*(.*?)\*(?!\*)/g, '_$1_')
-      .replace(/~~(.*?)~~/g, '~$1~')
-      .replace(/^[-*+]\s+/gm, '• ')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<$2|$1>')
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, 'Image: <$2|$1>')
-      .replace(/```[\w]*\n/g, '```\n')
-      .replace(/^#{1,6}\s+/gm, '')
-      .replace(/^---+$/gm, '━━━━━━━━━━')
-      .replace(/^- \[(x| )\] /gm, '• ')
-      .replace(/\[\^[^\]]+\]/g, '')
-      .replace(/^\[\^[^\]]+\]:[^\n]+\n?/gm, '')
-      .replace(/\$([^$]+)\$/g, '$1')
-      .replace(/\$\$([^$]+)\$\$/g, '$1');
   }
 
   /**
@@ -169,68 +135,6 @@ export class SlackClient {
   }
 
   /**
-   * Sanitizes text content to remove potentially malicious scripts and content
-   * 
-   * @private
-   * @param {string} text - Text content to sanitize
-   * @returns {Promise<string>} Sanitized text with malicious content removed and mentions resolved
-   */
-  private async sanitizeText(text: string): Promise<string> {
-    this.validateUrls(text);
-    const formatted = this.formatText(text);
-    const sanitized = formatted
-      .replace(/<script[^>]*>.*?<\/script>/gi, '[SCRIPT_REMOVED]')
-      .replace(/javascript:/gi, '[JAVASCRIPT_REMOVED]')
-      .replace(/data:text\/html/gi, '[DATA_URL_REMOVED]');
-    if (sanitized !== formatted) {
-      console.warn('Potentially malicious content sanitized:', {
-        original: formatted.substring(0, 100),
-        sanitized: sanitized.substring(0, 100)
-      });
-    }
-    return await this.resolveMentions(sanitized);
-  }
-
-  /**
-   * Validates URLs in text content for security threats
-   * 
-   * @private
-   * @param {string} text - Text content containing URLs to validate
-   * @throws {Error} When suspicious domains or non-standard ports are detected
-   */
-  private validateUrls(text: string): void {
-    const domains = process.env.SLACK_SUSPICIOUS_DOMAINS
-      ? process.env.SLACK_SUSPICIOUS_DOMAINS.split(',').map(domain => domain.trim())
-      : suspiciousDomains;
-    const directUrlRegex = /https?:\/\/[^\s)]+/gi;
-    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    const urls: string[] = [];
-    urls.push(...(text.match(directUrlRegex) || []));
-    let markdownMatch;
-    while ((markdownMatch = markdownLinkRegex.exec(text)) !== null) {
-      urls.push(markdownMatch[2]);
-    }
-    for (const url of urls) {
-      try {
-        const parsedUrl = new URL(url);
-        const domain = parsedUrl.hostname.toLowerCase();
-        if (domains.some(sus => domain.includes(sus))) {
-          throw new Error(`Suspicious domain detected: ${domain}`);
-        }
-        const allowedPorts = ['80', '443', '8080', '8443'];
-        if (parsedUrl.port && !allowedPorts.includes(parsedUrl.port)) {
-          throw new Error(`Non-standard port detected: ${parsedUrl.port}`);
-        }
-      } catch (error) {
-        if (error instanceof TypeError) {
-          throw new Error(`Invalid URL detected: ${url}`);
-        }
-        throw error;
-      }
-    }
-  }
-
-  /**
    * Adds a reaction emoji to a message
    * 
    * @param {string} channel_id - The ID of the channel containing the message
@@ -238,11 +142,7 @@ export class SlackClient {
    * @param {string} reaction - The name of the emoji reaction (without ::)
    * @returns {Promise<any>} Slack API response
    */
-  async addReaction(
-    channel_id: string,
-    timestamp: string,
-    reaction: string,
-  ): Promise<any> {
+  async addReaction(channel_id: string, timestamp: string, reaction: string): Promise<any> {
     this.checkRateLimit('addReaction');
     const sanitizedReaction = reaction.replace(/[^a-zA-Z0-9_]/g, '');
     const response = await fetch(`${slackApi}/reactions.add`, {
@@ -265,20 +165,16 @@ export class SlackClient {
    * @param {string} text - The new message text
    * @returns {Promise<any>} Slack API response
    */
-  async editMessage(
-    channel_id: string,
-    timestamp: string,
-    text: string,
-  ): Promise<any> {
+  async editMessage(channel_id: string, timestamp: string, text: string): Promise<any> {
     this.checkRateLimit('editMessage');
-    const sanitizedText = await this.sanitizeText(text);
+    const message = await this.resolveMentions(text);
     const response = await fetch(`${slackApi}/chat.update`, {
       method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
         ts: timestamp,
-        text: sanitizedText,
+        text: message,
         unfurl_links: false,
         unfurl_media: false,
         parse: "full",
@@ -299,10 +195,7 @@ export class SlackClient {
    * @param {number} [limit=10] - Number of messages to retrieve (max 1000)
    * @returns {Promise<any>} Slack API response with channel history
    */
-  async getChannelHistory(
-    channel_id: string,
-    limit: number = 10,
-  ): Promise<any> {
+  async getChannelHistory(channel_id: string, limit: number = 10): Promise<any> {
     this.checkRateLimit('getChannelHistory');
     const params = new URLSearchParams({
       channel: channel_id,
@@ -471,13 +364,13 @@ export class SlackClient {
    */
   async postMessage(channel_id: string, text: string): Promise<any> {
     this.checkRateLimit('postMessage');
-    const sanitizedText = await this.sanitizeText(text);
+    const message = await this.resolveMentions(text);
     const response = await fetch(`${slackApi}/chat.postMessage`, {
       method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
-        text: sanitizedText,
+        text: message,
         unfurl_links: false,
         unfurl_media: false,
         parse: "full",
@@ -500,18 +393,13 @@ export class SlackClient {
    * @param {boolean} [broadcast=false] - Whether to also send the reply to the main channel
    * @returns {Promise<any>} Slack API response with posted reply details
    */
-  async postReply(
-    channel_id: string,
-    thread_ts: string,
-    text: string,
-    broadcast: boolean = false,
-  ): Promise<any> {
+  async postReply(channel_id: string, thread_ts: string, text: string, broadcast: boolean = false): Promise<any> {
     this.checkRateLimit('postReply');
-    const sanitizedText = await this.sanitizeText(text);
+    const message = await this.resolveMentions(text);
     const body: any = {
       channel: channel_id,
       thread_ts: thread_ts,
-      text: sanitizedText,
+      text: message,
       unfurl_links: false,
       unfurl_media: false,
       parse: "full",
