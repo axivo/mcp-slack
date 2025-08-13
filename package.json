@@ -1,45 +1,42 @@
 {
   "name": "@axivo/mcp-slack",
-  "version": "1.0.1",
-  "description": "A secure Slack MCP server with enhanced security features",
-  "main": "dist/index.js",
+  "version": "1.0.2",
+  "type": "module",
+  "description": "MCP server for interacting with Slack",
+  "keywords": [
+    "mcp",
+    "messaging",
+    "model-context-protocol",
+    "server",
+    "slack"
+  ],
+  "license": "BSD-3-Clause",
+  "author": "AXIVO",
+  "files": [
+    "dist/**",
+    "LICENSE",
+    "README.md"
+  ],
   "bin": {
     "mcp-slack": "dist/index.js"
   },
-  "type": "module",
-  "files": [
-    "dist/**/*",
-    "README.md",
-    "LICENSE"
-  ],
+  "repository": "github:axivo/mcp-slack",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
     "clean": "rm -rf dist"
   },
-  "keywords": [
-    "mcp",
-    "slack",
-    "model-context-protocol",
-    "claude"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/axivo/mcp-slack.git"
-  },
-  "author": "AXIVO",
-  "license": "BSD-3-Clause",
-  "publishConfig": {
-    "access": "public"
-  },
-  "engines": {
-    "node": ">=24.0.0"
-  },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.0"
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "slackify-markdown": "^4.5.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": ">=5.0.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

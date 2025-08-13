@@ -14,6 +14,7 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
+import slackifyMarkdown from 'slackify-markdown';
 import { SlackClient } from "./client.js";
 
 interface AddReactionArgs {
@@ -273,7 +274,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.timestamp || !args.text) {
       throw new Error('Missing required arguments: channel_id, timestamp, and text');
     }
-    const response = await this.slackClient.editMessage(args.channel_id, args.timestamp, args.text);
+    const convertedText = slackifyMarkdown(args.text);
+    const response = await this.slackClient.editMessage(args.channel_id, args.timestamp, convertedText);
     return this.createResponse(response);
   }
 
@@ -367,7 +369,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.text) {
       throw new Error('Missing required arguments: channel_id and text');
     }
-    const response = await this.slackClient.postMessage(args.channel_id, args.text);
+    const convertedText = slackifyMarkdown(args.text);
+    const response = await this.slackClient.postMessage(args.channel_id, convertedText);
     return this.createResponse(response);
   }
 
@@ -382,7 +385,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.thread_ts || !args.text) {
       throw new Error('Missing required arguments: channel_id, thread_ts, and text');
     }
-    const response = await this.slackClient.postReply(args.channel_id, args.thread_ts, args.text, args.broadcast);
+    const convertedText = slackifyMarkdown(args.text);
+    const response = await this.slackClient.postReply(args.channel_id, args.thread_ts, convertedText, args.broadcast);
     return this.createResponse(response);
   }
 
