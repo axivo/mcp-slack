@@ -1,8 +1,18 @@
 # Slack MCP Server
 
-A Slack MCP (Model Context Protocol) server that provides 9 Slack tools for Claude.
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg?style=flat&logo=opensourceinitiative&logoColor=white)](https://github.com/axivo/claude/blob/main/LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js->=24.0.0-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript->=5.0.0-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-### Setup
+A MCP (Model Context Protocol) server for interacting with Slack.
+
+### Security Features
+
+- **Markdown Conversion**: Automatically converts GitHub Flavored Markdown to Slack `mrkdwn` format
+- **Link Unfurling Disabled**: Prevents automatic link crawling that could leak sensitive information
+- **Rate Limiting**: Enforces 60 requests per minute per endpoint
+
+### Slack Setup
 
 1. Create a Slack App:
    - Visit the [Slack Apps](https://api.slack.com/apps)
@@ -25,9 +35,9 @@ A Slack MCP (Model Context Protocol) server that provides 9 Slack tools for Clau
 
 4. Get your [Team ID](https://slack.com/help/articles/221769328-Locate-your-Slack-URL-or-ID#find-your-workspace-or-org-id) (starts with a `T`)
 
-### MCP Server
+### MCP Server Configuration
 
-Add to your `mcp.json` servers configuration:
+Add to `mcp.json` servers configuration:
 
 ```json
 {
@@ -42,32 +52,22 @@ Add to your `mcp.json` servers configuration:
         "SLACK_BOT_TOKEN": "xoxb-your-bot-token",
         "SLACK_TEAM_ID": "T01234567",
         "SLACK_CHANNEL_IDS": "C01234567, C76543210",
-        "SLACK_SUSPICIOUS_DOMAINS": "bit.ly, goo.gl, ngrok.io"
       }
     }
   }
 }
 ```
 
-### Environment Variables
+#### Environment Variables
 
-#### Required
+Required variables:
 
-- `SLACK_BOT_TOKEN` - Your Slack bot token (starts with `xoxb-`)
-- `SLACK_TEAM_ID` - Your Slack workspace/team ID (starts with `T`)
+- `SLACK_BOT_TOKEN` - Slack bot token (starts with `xoxb-`)
+- `SLACK_TEAM_ID` - Slack [Team ID](https://slack.com/help/articles/221769328-Locate-your-Slack-URL-or-ID#find-your-workspace-or-org-id) (starts with `T`)
 
-#### Optional
+Optional variables:
 
-- `SLACK_CHANNEL_IDS` - Comma-separated list of channel IDs to restrict access to specific channels only. If not provided, the server can access all public channels the bot has permissions for.
-- `SLACK_SUSPICIOUS_DOMAINS` - Comma-separated list of domains to block for security. If not provided, defaults to blocking known URL shorteners: `bit.ly, goo.gl, ngrok.com, ngrok.io, tinyurl.com`. Set to empty string to disable domain blocking.
-
-### Security Features
-
-- **GitHub Markdown Conversion**: Automatically converts GitHub Flavored Markdown to Slack mrkdwn format
-- **URL Validation**: Blocks suspicious domains and non-standard ports to prevent data exfiltration
-- **Link Unfurling Disabled**: Prevents automatic link crawling that could leak sensitive information
-- **Content Sanitization**: Removes malicious scripts and validates all user input
-- **Rate Limiting**: Enforces 60 requests per minute per endpoint
+- `SLACK_CHANNEL_IDS` - Comma-separated list of channel IDs to restrict access to specific channels only. If not set, the server can access all public channels the bot has permissions for.
 
 ### Tools
 
