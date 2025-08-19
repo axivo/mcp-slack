@@ -85,7 +85,10 @@ export class SlackMcpServer {
    */
   constructor(botToken: string) {
     this.slackClient = new SlackClient(botToken);
-    this.server = new Server({ name: 'Slack MCP Server', version: this.slackClient.version() }, { capabilities: { tools: {} } });
+    this.server = new Server(
+      { name: 'slack', version: this.slackClient.version() },
+      { capabilities: { tools: {} } }
+    );
     this.toolHandlers = new Map<string, ToolHandler>();
     this.setupToolHandlers();
     this.setupHandlers();
@@ -99,7 +102,7 @@ export class SlackMcpServer {
    */
   private addReaction(): Tool {
     return {
-      name: 'slack_add_reaction',
+      name: 'add_reaction',
       description: 'Add a reaction emoji to a message',
       inputSchema: {
         type: 'object',
@@ -114,17 +117,6 @@ export class SlackMcpServer {
   }
 
   /**
-   * Creates a standardized response for tool execution
-   * 
-   * @private
-   * @param {any} response - The response data from Slack API
-   * @returns {Object} Standardized MCP response format
-   */
-  private createResponse(response: any): any {
-    return { content: [{ type: 'text', text: JSON.stringify(response) }] };
-  }
-
-  /**
    * Tool definition for editing existing messages
    * 
    * @private
@@ -132,7 +124,7 @@ export class SlackMcpServer {
    */
   private editMessage(): Tool {
     return {
-      name: 'slack_edit_message',
+      name: 'edit_message',
       description: 'Edit an existing message in a Slack channel',
       inputSchema: {
         type: 'object',
@@ -154,7 +146,7 @@ export class SlackMcpServer {
    */
   private getChannelHistory(): Tool {
     return {
-      name: 'slack_get_channel_history',
+      name: 'get_channel_history',
       description: 'Get recent messages from a channel',
       inputSchema: {
         type: 'object',
@@ -195,7 +187,7 @@ export class SlackMcpServer {
    */
   private getThreadReplies(): Tool {
     return {
-      name: 'slack_get_thread_replies',
+      name: 'get_thread_replies',
       description: 'Get all replies in a message thread',
       inputSchema: {
         type: 'object',
@@ -216,7 +208,7 @@ export class SlackMcpServer {
    */
   private getUserProfile(): Tool {
     return {
-      name: 'slack_get_user_profile',
+      name: 'get_user_profile',
       description: 'Get detailed profile information for a specific user',
       inputSchema: {
         type: 'object',
@@ -236,7 +228,7 @@ export class SlackMcpServer {
    */
   private getUsers(): Tool {
     return {
-      name: 'slack_get_users',
+      name: 'get_users',
       description: 'Get a list of all users in the workspace with their basic profile information',
       inputSchema: {
         type: 'object',
@@ -257,10 +249,10 @@ export class SlackMcpServer {
    */
   private async handleAddReaction(args: AddReactionArgs): Promise<any> {
     if (!args.channel_id || !args.timestamp || !args.reaction) {
-      throw new Error('Missing required arguments: channel_id, timestamp, and reaction');
+      return 'Missing required arguments: channel_id, timestamp, and reaction';
     }
     const response = await this.slackClient.addReaction(args.channel_id, args.timestamp, args.reaction);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -272,11 +264,11 @@ export class SlackMcpServer {
    */
   private async handleEditMessage(args: EditMessageArgs): Promise<any> {
     if (!args.channel_id || !args.timestamp || !args.text) {
-      throw new Error('Missing required arguments: channel_id, timestamp, and text');
+      return 'Missing required arguments: channel_id, timestamp, and text';
     }
     const convertedText = slackifyMarkdown(args.text);
     const response = await this.slackClient.editMessage(args.channel_id, args.timestamp, convertedText);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -288,10 +280,10 @@ export class SlackMcpServer {
    */
   private async handleGetChannelHistory(args: GetChannelHistoryArgs): Promise<any> {
     if (!args.channel_id) {
-      throw new Error('Missing required argument: channel_id');
+      return 'Missing required argument: channel_id';
     }
     const response = await this.slackClient.getChannelHistory(args.channel_id, args.limit);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -303,10 +295,10 @@ export class SlackMcpServer {
    */
   private async handleGetThreadReplies(args: GetThreadRepliesArgs): Promise<any> {
     if (!args.channel_id || !args.thread_ts) {
-      throw new Error('Missing required arguments: channel_id and thread_ts');
+      return 'Missing required arguments: channel_id and thread_ts';
     }
     const response = await this.slackClient.getThreadReplies(args.channel_id, args.thread_ts);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -318,10 +310,10 @@ export class SlackMcpServer {
    */
   private async handleGetUserProfile(args: GetUserProfileArgs): Promise<any> {
     if (!args.user_id) {
-      throw new Error('Missing required argument: user_id');
+      return 'Missing required argument: user_id';
     }
     const response = await this.slackClient.getUserProfile(args.user_id);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -333,7 +325,7 @@ export class SlackMcpServer {
    */
   private async handleGetUsers(args: GetUsersArgs): Promise<any> {
     const response = await this.slackClient.getUsers(args.limit, args.cursor);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -345,7 +337,7 @@ export class SlackMcpServer {
    */
   private async handleListChannels(args: ListChannelsArgs): Promise<any> {
     const response = await this.slackClient.getChannels(args.limit, args.cursor);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -367,11 +359,11 @@ export class SlackMcpServer {
    */
   private async handlePostMessage(args: PostMessageArgs): Promise<any> {
     if (!args.channel_id || !args.text) {
-      throw new Error('Missing required arguments: channel_id and text');
+      return 'Missing required arguments: channel_id and text';
     }
     const convertedText = slackifyMarkdown(args.text);
     const response = await this.slackClient.postMessage(args.channel_id, convertedText);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -383,11 +375,11 @@ export class SlackMcpServer {
    */
   private async handleReplyToThread(args: ReplyToThreadArgs): Promise<any> {
     if (!args.channel_id || !args.thread_ts || !args.text) {
-      throw new Error('Missing required arguments: channel_id, thread_ts, and text');
+      return 'Missing required arguments: channel_id, thread_ts, and text';
     }
     const convertedText = slackifyMarkdown(args.text);
     const response = await this.slackClient.postReply(args.channel_id, args.thread_ts, convertedText, args.broadcast);
-    return this.createResponse(response);
+    return response;
   }
 
   /**
@@ -398,24 +390,15 @@ export class SlackMcpServer {
    * @returns {Promise<Object>} Response containing tool execution results
    */
   private async handleRequest(request: CallToolRequest): Promise<any> {
-    try {
-      if (!request.params.arguments) {
-        throw new Error('No arguments provided');
-      }
-      const handler = this.toolHandlers.get(request.params.name);
-      if (!handler) {
-        throw new Error(`Unknown tool: ${request.params.name}`);
-      }
-      return await handler(request.params.arguments);
-    } catch (error) {
-      console.error('Error executing tool:', error);
-      return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
-        }],
-      };
+    if (!request.params.arguments) {
+      return 'No arguments provided';
     }
+    const handler = this.toolHandlers.get(request.params.name);
+    if (!handler) {
+      return `Unknown tool: ${request.params.name}`;
+    }
+    const result = await handler(request.params.arguments);
+    return this.slackClient.response(result, typeof result === 'string' ? false : true);
   }
 
   /**
@@ -426,7 +409,7 @@ export class SlackMcpServer {
    */
   private listChannels(): Tool {
     return {
-      name: 'slack_list_channels',
+      name: 'list_channels',
       description: 'List public or pre-defined channels in the workspace with pagination',
       inputSchema: {
         type: 'object',
@@ -446,7 +429,7 @@ export class SlackMcpServer {
    */
   private postMessage(): Tool {
     return {
-      name: 'slack_post_message',
+      name: 'post_message',
       description: 'Post a new message to a Slack channel',
       inputSchema: {
         type: 'object',
@@ -467,7 +450,7 @@ export class SlackMcpServer {
    */
   private replyToThread(): Tool {
     return {
-      name: 'slack_reply_to_thread',
+      name: 'reply_to_thread',
       description: 'Reply to a specific message thread in Slack',
       inputSchema: {
         type: 'object',
@@ -504,15 +487,15 @@ export class SlackMcpServer {
    * @private
    */
   private setupToolHandlers(): void {
-    this.toolHandlers.set('slack_add_reaction', this.handleAddReaction.bind(this));
-    this.toolHandlers.set('slack_edit_message', this.handleEditMessage.bind(this));
-    this.toolHandlers.set('slack_get_channel_history', this.handleGetChannelHistory.bind(this));
-    this.toolHandlers.set('slack_get_thread_replies', this.handleGetThreadReplies.bind(this));
-    this.toolHandlers.set('slack_get_user_profile', this.handleGetUserProfile.bind(this));
-    this.toolHandlers.set('slack_get_users', this.handleGetUsers.bind(this));
-    this.toolHandlers.set('slack_list_channels', this.handleListChannels.bind(this));
-    this.toolHandlers.set('slack_post_message', this.handlePostMessage.bind(this));
-    this.toolHandlers.set('slack_reply_to_thread', this.handleReplyToThread.bind(this));
+    this.toolHandlers.set('add_reaction', this.handleAddReaction.bind(this));
+    this.toolHandlers.set('edit_message', this.handleEditMessage.bind(this));
+    this.toolHandlers.set('get_channel_history', this.handleGetChannelHistory.bind(this));
+    this.toolHandlers.set('get_thread_replies', this.handleGetThreadReplies.bind(this));
+    this.toolHandlers.set('get_user_profile', this.handleGetUserProfile.bind(this));
+    this.toolHandlers.set('get_users', this.handleGetUsers.bind(this));
+    this.toolHandlers.set('list_channels', this.handleListChannels.bind(this));
+    this.toolHandlers.set('post_message', this.handlePostMessage.bind(this));
+    this.toolHandlers.set('reply_to_thread', this.handleReplyToThread.bind(this));
   }
 
   /**
@@ -523,9 +506,7 @@ export class SlackMcpServer {
    */
   async connect(transport: StdioServerTransport): Promise<void> {
     this.transport = transport;
-    transport.onerror = (error: Error) => {
-      console.error('Transport error:', error.message);
-    };
+    transport.onerror = () => { };
     await this.server.connect(transport);
   }
 }
