@@ -1,6 +1,6 @@
 {
   "name": "@axivo/mcp-slack",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "description": "MCP server for interacting with Slack",
   "keywords": [
@@ -13,7 +13,7 @@
   "license": "BSD-3-Clause",
   "author": "AXIVO",
   "files": [
-    "dist/**",
+    "dist/**/*",
     "LICENSE",
     "README.md"
   ],
