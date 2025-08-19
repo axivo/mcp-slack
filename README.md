@@ -51,7 +51,7 @@ Add to `mcp.json` servers configuration:
       "env": {
         "SLACK_BOT_TOKEN": "xoxb-your-bot-token",
         "SLACK_TEAM_ID": "T01234567",
-        "SLACK_CHANNEL_IDS": "C01234567, C76543210",
+        "SLACK_CHANNEL_IDS": "C01234567, C76543210"
       }
     }
   }
@@ -71,7 +71,7 @@ Optional variables:
 
 ### Tools
 
-1. `slack_add_reaction`
+1. `add_reaction`
    - Add a reaction emoji to a message
    - Required inputs:
      - `channel_id` (string): The ID of the channel containing the message
@@ -79,7 +79,7 @@ Optional variables:
      - `reaction` (string): The name of the emoji reaction (without ::)
    - Returns: Reaction addition confirmation
 
-2. `slack_edit_message`
+2. `edit_message`
    - Edit an existing message in a Slack channel
    - Required inputs:
      - `channel_id` (string): The ID of the channel containing the message
@@ -87,7 +87,7 @@ Optional variables:
      - `text` (string): The message text to edit
    - Returns: Message edit confirmation with updated content
 
-3. `slack_get_channel_history`
+3. `get_channel_history`
    - Get recent messages from a channel
    - Required inputs:
      - `channel_id` (string): The ID of the channel
@@ -95,41 +95,41 @@ Optional variables:
      - `limit` (number, default: 10): Number of messages to retrieve
    - Returns: Array of recent messages with metadata
 
-4. `slack_get_thread_replies`
+4. `get_thread_replies`
    - Get all replies in a message thread
    - Required inputs:
      - `channel_id` (string): The ID of the channel containing the thread
      - `thread_ts` (string): The timestamp of the parent message in the format '1234567890.123456'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it
    - Returns: Array of thread replies with message details
 
-5. `slack_get_user_profile`
+5. `get_user_profile`
    - Get detailed profile information for a specific user
    - Required inputs:
      - `user_id` (string): The ID of the user
    - Returns: Detailed user profile information including display name, status, timezone, etc.
 
-6. `slack_get_users`
+6. `get_users`
    - Get a list of all users in the workspace with their basic profile information
    - Optional inputs:
      - `limit` (number, default: 100, max: 200): Maximum number of users to return
      - `cursor` (string): Pagination cursor for next page of results
    - Returns: List of workspace users with basic profile information
 
-7. `slack_list_channels`
+7. `list_channels`
    - List public or pre-defined channels in the workspace with pagination
    - Optional inputs:
      - `limit` (number, default: 100, max: 200): Maximum number of channels to return
      - `cursor` (string): Pagination cursor for next page of results
    - Returns: List of channels with their IDs and information
 
-8. `slack_post_message`
+8. `post_message`
    - Post a new message to a Slack channel
    - Required inputs:
      - `channel_id` (string): The ID of the channel to post to
      - `text` (string): The message text to post
    - Returns: Message posting confirmation with timestamp and channel info
 
-9. `slack_reply_to_thread`
+9. `reply_to_thread`
    - Reply to a specific message thread in Slack
    - Required inputs:
      - `channel_id` (string): The ID of the channel containing the thread
