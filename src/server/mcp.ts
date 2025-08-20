@@ -73,8 +73,8 @@ type ToolHandler = (args: any) => Promise<any>;
  * @class SlackMcpServer
  */
 export class SlackMcpServer {
+  private client: SlackClient;
   private server: Server;
-  private slackClient: SlackClient;
   private toolHandlers: Map<string, ToolHandler>;
   private transport?: StdioServerTransport;
 
@@ -84,9 +84,9 @@ export class SlackMcpServer {
    * @param {string} botToken - Slack bot token for API authentication
    */
   constructor(botToken: string) {
-    this.slackClient = new SlackClient(botToken);
+    this.client = new SlackClient(botToken);
     this.server = new Server(
-      { name: 'slack', version: this.slackClient.version() },
+      { name: 'slack', version: this.client.version() },
       { capabilities: { tools: {} } }
     );
     this.toolHandlers = new Map<string, ToolHandler>();
@@ -109,10 +109,10 @@ export class SlackMcpServer {
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel containing the message' },
           timestamp: { type: 'string', description: 'The timestamp of the message to react to' },
-          reaction: { type: 'string', description: 'The name of the emoji reaction (without ::)' },
+          reaction: { type: 'string', description: 'The name of the emoji reaction (without ::)' }
         },
-        required: ['channel_id', 'timestamp', 'reaction'],
-      },
+        required: ['channel_id', 'timestamp', 'reaction']
+      }
     };
   }
 
@@ -131,10 +131,10 @@ export class SlackMcpServer {
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel containing the message' },
           timestamp: { type: 'string', description: 'The timestamp of the message to edit' },
-          text: { type: 'string', description: 'The message text to edit' },
+          text: { type: 'string', description: 'The message text to edit' }
         },
-        required: ['channel_id', 'timestamp', 'text'],
-      },
+        required: ['channel_id', 'timestamp', 'text']
+      }
     };
   }
 
@@ -152,10 +152,10 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel' },
-          limit: { type: 'number', description: 'Number of messages to retrieve (default 10)', default: 10 },
+          limit: { type: 'number', description: 'Number of messages to retrieve (default 10)', default: 10 }
         },
-        required: ['channel_id'],
-      },
+        required: ['channel_id']
+      }
     };
   }
 
@@ -175,7 +175,7 @@ export class SlackMcpServer {
       this.getChannelHistory(),
       this.getThreadReplies(),
       this.getUsers(),
-      this.getUserProfile(),
+      this.getUserProfile()
     ];
   }
 
@@ -193,10 +193,10 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel containing the thread' },
-          thread_ts: { type: 'string', description: 'The timestamp of the parent message in the format \'1234567890.123456\'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it.' },
+          thread_ts: { type: 'string', description: 'The timestamp of the parent message in the format `1234567890.123456`, timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it' }
         },
-        required: ['channel_id', 'thread_ts'],
-      },
+        required: ['channel_id', 'thread_ts']
+      }
     };
   }
 
@@ -213,10 +213,10 @@ export class SlackMcpServer {
       inputSchema: {
         type: 'object',
         properties: {
-          user_id: { type: 'string', description: 'The ID of the user' },
+          user_id: { type: 'string', description: 'The ID of the user' }
         },
-        required: ['user_id'],
-      },
+        required: ['user_id']
+      }
     };
   }
 
@@ -234,9 +234,9 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           cursor: { type: 'string', description: 'Pagination cursor for next page of results' },
-          limit: { type: 'number', description: 'Maximum number of users to return (default 100, max 200)', default: 100 },
-        },
-      },
+          limit: { type: 'number', description: 'Maximum number of users to return (default 100, max 200)', default: 100 }
+        }
+      }
     };
   }
 
@@ -251,7 +251,7 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.timestamp || !args.reaction) {
       return 'Missing required arguments: channel_id, timestamp, and reaction';
     }
-    const response = await this.slackClient.addReaction(args.channel_id, args.timestamp, args.reaction);
+    const response = await this.client.addReaction(args.channel_id, args.timestamp, args.reaction);
     return response;
   }
 
@@ -267,7 +267,7 @@ export class SlackMcpServer {
       return 'Missing required arguments: channel_id, timestamp, and text';
     }
     const convertedText = slackifyMarkdown(args.text);
-    const response = await this.slackClient.editMessage(args.channel_id, args.timestamp, convertedText);
+    const response = await this.client.editMessage(args.channel_id, args.timestamp, convertedText);
     return response;
   }
 
@@ -282,7 +282,7 @@ export class SlackMcpServer {
     if (!args.channel_id) {
       return 'Missing required argument: channel_id';
     }
-    const response = await this.slackClient.getChannelHistory(args.channel_id, args.limit);
+    const response = await this.client.getChannelHistory(args.channel_id, args.limit);
     return response;
   }
 
@@ -297,7 +297,7 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.thread_ts) {
       return 'Missing required arguments: channel_id and thread_ts';
     }
-    const response = await this.slackClient.getThreadReplies(args.channel_id, args.thread_ts);
+    const response = await this.client.getThreadReplies(args.channel_id, args.thread_ts);
     return response;
   }
 
@@ -312,7 +312,7 @@ export class SlackMcpServer {
     if (!args.user_id) {
       return 'Missing required argument: user_id';
     }
-    const response = await this.slackClient.getUserProfile(args.user_id);
+    const response = await this.client.getUserProfile(args.user_id);
     return response;
   }
 
@@ -324,7 +324,7 @@ export class SlackMcpServer {
    * @returns {Promise<any>} Tool execution response
    */
   private async handleGetUsers(args: GetUsersArgs): Promise<any> {
-    const response = await this.slackClient.getUsers(args.limit, args.cursor);
+    const response = await this.client.getUsers(args.limit, args.cursor);
     return response;
   }
 
@@ -336,7 +336,7 @@ export class SlackMcpServer {
    * @returns {Promise<any>} Tool execution response
    */
   private async handleListChannels(args: ListChannelsArgs): Promise<any> {
-    const response = await this.slackClient.getChannels(args.limit, args.cursor);
+    const response = await this.client.getChannels(args.limit, args.cursor);
     return response;
   }
 
@@ -362,7 +362,7 @@ export class SlackMcpServer {
       return 'Missing required arguments: channel_id and text';
     }
     const convertedText = slackifyMarkdown(args.text);
-    const response = await this.slackClient.postMessage(args.channel_id, convertedText);
+    const response = await this.client.postMessage(args.channel_id, convertedText);
     return response;
   }
 
@@ -378,7 +378,7 @@ export class SlackMcpServer {
       return 'Missing required arguments: channel_id, thread_ts, and text';
     }
     const convertedText = slackifyMarkdown(args.text);
-    const response = await this.slackClient.postReply(args.channel_id, args.thread_ts, convertedText, args.broadcast);
+    const response = await this.client.postReply(args.channel_id, args.thread_ts, convertedText, args.broadcast);
     return response;
   }
 
@@ -398,7 +398,7 @@ export class SlackMcpServer {
       return `Unknown tool: ${request.params.name}`;
     }
     const result = await handler(request.params.arguments);
-    return this.slackClient.response(result, typeof result === 'string' ? false : true);
+    return this.client.response(result, typeof result === 'string' ? false : true);
   }
 
   /**
@@ -415,9 +415,9 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           limit: { type: 'number', description: 'Maximum number of channels to return (default 100, max 200)', default: 100 },
-          cursor: { type: 'string', description: 'Pagination cursor for next page of results' },
-        },
-      },
+          cursor: { type: 'string', description: 'Pagination cursor for next page of results' }
+        }
+      }
     };
   }
 
@@ -435,10 +435,10 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel to post to' },
-          text: { type: 'string', description: 'The message text to post' },
+          text: { type: 'string', description: 'The message text to post' }
         },
-        required: ['channel_id', 'text'],
-      },
+        required: ['channel_id', 'text']
+      }
     };
   }
 
@@ -458,10 +458,10 @@ export class SlackMcpServer {
           channel_id: { type: 'string', description: 'The ID of the channel containing the thread' },
           thread_ts: { type: 'string', description: 'The timestamp of the parent message in the format \'1234567890.123456\'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it.' },
           text: { type: 'string', description: 'The reply text to post' },
-          broadcast: { type: 'boolean', description: 'Whether to also send the reply to the main channel (default: false)', default: false },
+          broadcast: { type: 'boolean', description: 'Whether to also send the reply to the main channel (default: false)', default: false }
         },
-        required: ['channel_id', 'thread_ts', 'text'],
-      },
+        required: ['channel_id', 'thread_ts', 'text']
+      }
     };
   }
 
@@ -471,14 +471,8 @@ export class SlackMcpServer {
    * @private
    */
   private setupHandlers(): void {
-    this.server.setRequestHandler(
-      CallToolRequestSchema,
-      this.handleRequest.bind(this)
-    );
-    this.server.setRequestHandler(
-      ListToolsRequestSchema,
-      this.handleListTools.bind(this)
-    );
+    this.server.setRequestHandler(CallToolRequestSchema, this.handleRequest.bind(this));
+    this.server.setRequestHandler(ListToolsRequestSchema, this.handleListTools.bind(this));
   }
 
   /**

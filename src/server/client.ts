@@ -80,7 +80,7 @@ export class SlackClient {
         channel: channel_id,
         name: sanitizedReaction,
         timestamp: timestamp
-      }),
+      })
     });
     return response.json();
   }
@@ -106,7 +106,7 @@ export class SlackClient {
         ts: timestamp,
         unfurl_links: false,
         unfurl_media: false
-      }),
+      })
     });
     return await response.json();
   }
@@ -126,7 +126,7 @@ export class SlackClient {
     });
     const response = await fetch(
       `${slackApi}/conversations.history?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     return response.json();
   }
@@ -144,7 +144,7 @@ export class SlackClient {
     });
     const response = await fetch(
       `${slackApi}/conversations.info?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     const result = await response.json();
     return result.ok ? result.channel : null;
@@ -172,7 +172,7 @@ export class SlackClient {
       }
       const response = await fetch(
         `${slackApi}/conversations.list?${params}`,
-        { headers: this.botHeaders },
+        { headers: this.botHeaders }
       );
       return response.json();
     }
@@ -213,7 +213,7 @@ export class SlackClient {
     });
     const response = await fetch(
       `${slackApi}/conversations.replies?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     return response.json();
   }
@@ -231,7 +231,7 @@ export class SlackClient {
     });
     const response = await fetch(
       `${slackApi}/users.info?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     const result = await response.json();
     return result.ok ? result.user : null;
@@ -251,7 +251,7 @@ export class SlackClient {
     });
     const response = await fetch(
       `${slackApi}/users.profile.get?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     return response.json();
   }
@@ -297,7 +297,7 @@ export class SlackClient {
         text: text,
         unfurl_links: false,
         unfurl_media: false
-      }),
+      })
     });
     return await response.json();
   }
