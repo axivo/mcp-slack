@@ -23,11 +23,8 @@ const slackApi = 'https://slack.com/api';
 export class SlackClient {
   private botHeaders: { Authorization: string; "Content-Type": string };
   private rateLimiter: Map<string, number> = new Map();
-  private readonly RATE_LIMIT_WINDOW = 60000;
   private readonly RATE_LIMIT_MAX_REQUESTS = 60;
-  private userCache: Map<string, any> = new Map();
-  private cacheExpiry: number = 0;
-  private readonly CACHE_DURATION = 300000;
+  private readonly RATE_LIMIT_WINDOW = 60000;
 
   /**
    * Creates a new SlackClient instance
@@ -37,7 +34,7 @@ export class SlackClient {
   constructor(botToken: string) {
     this.botHeaders = {
       Authorization: `Bearer ${botToken}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     };
   }
 
@@ -54,7 +51,7 @@ export class SlackClient {
     const key = `${endpoint}_${Math.floor(now / this.RATE_LIMIT_WINDOW)}`;
     const current = this.rateLimiter.get(key) || 0;
     if (current >= this.RATE_LIMIT_MAX_REQUESTS) {
-      throw new Error(`Rate limit exceeded for ${endpoint}`);
+      return this.response(`Rate limit exceeded for '${endpoint}' endpoint.`);
     }
     this.rateLimiter.set(key, current + 1);
     for (const [k, _] of this.rateLimiter) {
@@ -63,75 +60,6 @@ export class SlackClient {
       }
     }
     return true;
-  }
-
-  /**
-   * Gets cached user data or fetches from Slack API
-   * 
-   * @private
-   * @returns {Promise<Map<string, any>>} Map of display names to user data
-   */
-  private async getCachedUsers(): Promise<Map<string, any>> {
-    const now = Date.now();
-    if (this.userCache.size > 0 && now < this.cacheExpiry) {
-      return this.userCache;
-    }
-    try {
-      const response = await this.getUsers(200);
-      if (response.ok && response.members) {
-        this.userCache.clear();
-        for (const user of response.members) {
-          if (!user.deleted) {
-            const realName = user.real_name?.toLowerCase();
-            const displayName = user.profile?.display_name?.toLowerCase();
-            const username = user.name?.toLowerCase();
-            if (realName) {
-              this.userCache.set(realName, user);
-            }
-            if (displayName && displayName !== realName) {
-              this.userCache.set(displayName, user);
-            }
-            if (username) {
-              this.userCache.set(username, user);
-            }
-          }
-        }
-        this.cacheExpiry = now + this.CACHE_DURATION;
-      }
-    } catch (error) {
-      console.warn('Failed to cache users for mention resolution:', error);
-    }
-    return this.userCache;
-  }
-
-  /**
-   * Resolves display name mentions to username mentions
-   * 
-   * @private
-   * @param {string} text - Text content containing potential mentions
-   * @returns {Promise<string>} Text with resolved mentions
-   */
-  private async resolveMentions(text: string): Promise<string> {
-    const mentionRegex = /@([A-Za-z][A-Za-z\s]*[A-Za-z]|[A-Za-z])/g;
-    const matches = text.match(mentionRegex);
-    if (!matches) {
-      return text;
-    }
-    try {
-      const userCache = await this.getCachedUsers();
-      let resolvedText = text;
-      for (const match of matches) {
-        const displayName = match.substring(1).toLowerCase().trim();
-        const user = userCache.get(displayName);
-        if (user && user.name) {
-          resolvedText = resolvedText.replace(match, `@${user.name}`);
-        }
-      }
-      return resolvedText;
-    } catch (error) {
-      console.warn('Failed to resolve mentions, using original text:', error);
-      return text;
-    }
   }
 
   /**
@@ -150,9 +78,9 @@ export class SlackClient {
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
-        timestamp: timestamp,
         name: sanitizedReaction,
-      }),
+        timestamp: timestamp
+      })
     });
     return response.json();
   }
@@ -167,25 +95,20 @@ export class SlackClient {
    */
   async editMessage(channel_id: string, timestamp: string, text: string): Promise<any> {
     this.checkRateLimit('editMessage');
-    const message = await this.resolveMentions(text);
     const response = await fetch(`${slackApi}/chat.update`, {
       method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
-        ts: timestamp,
-        text: message,
-        unfurl_links: false,
-        unfurl_media: false,
+        link_names: true,
         parse: "full",
-        link_names: false,
-      }),
+        text: text,
+        ts: timestamp,
+        unfurl_links: false,
+        unfurl_media: false
+      })
     });
-    const result = await response.json();
-    if (!result.ok) {
-      console.error('Slack API error:', result.error);
-    }
-    return result;
+    return await response.json();
   }
 
   /**
@@ -199,11 +122,11 @@ export class SlackClient {
     this.checkRateLimit('getChannelHistory');
     const params = new URLSearchParams({
       channel: channel_id,
-      limit: Math.min(limit, 1000).toString(),
+      limit: Math.min(limit, 1000).toString()
     });
     const response = await fetch(
       `${slackApi}/conversations.history?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     return response.json();
   }
@@ -217,11 +140,11 @@ export class SlackClient {
   async getChannelInfo(channel_id: string): Promise<any> {
     this.checkRateLimit('getChannelInfo');
     const params = new URLSearchParams({
-      channel: channel_id,
+      channel: channel_id
     });
     const response = await fetch(
       `${slackApi}/conversations.info?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     const result = await response.json();
     return result.ok ? result.channel : null;
@@ -242,14 +165,14 @@ export class SlackClient {
         types: 'public_channel',
         exclude_archived: 'true',
         limit: Math.min(limit, 200).toString(),
-        team_id: process.env.SLACK_TEAM_ID!,
+        team_id: process.env.SLACK_TEAM_ID!
       });
       if (cursor) {
         params.append("cursor", cursor);
       }
       const response = await fetch(
         `${slackApi}/conversations.list?${params}`,
-        { headers: this.botHeaders },
+        { headers: this.botHeaders }
       );
       return response.json();
     }
@@ -257,7 +180,7 @@ export class SlackClient {
     const channels = [];
     for (const channelId of predefinedChannelIdsArray) {
       const params = new URLSearchParams({
-        channel: channelId,
+        channel: channelId
       });
       const response = await fetch(
         `${slackApi}/conversations.info?${params}`,
@@ -271,7 +194,7 @@ export class SlackClient {
     return {
       ok: true,
       channels: channels,
-      response_metadata: { next_cursor: '' },
+      response_metadata: { next_cursor: '' }
     };
   }
 
@@ -286,11 +209,11 @@ export class SlackClient {
     this.checkRateLimit('getThreadReplies');
     const params = new URLSearchParams({
       channel: channel_id,
-      ts: thread_ts,
+      ts: thread_ts
     });
     const response = await fetch(
       `${slackApi}/conversations.replies?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     return response.json();
   }
@@ -304,11 +227,11 @@ export class SlackClient {
   async getUserInfo(user_id: string): Promise<any> {
     this.checkRateLimit('getUserInfo');
     const params = new URLSearchParams({
-      user: user_id,
+      user: user_id
     });
     const response = await fetch(
       `${slackApi}/users.info?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     const result = await response.json();
     return result.ok ? result.user : null;
@@ -324,11 +247,11 @@ export class SlackClient {
     this.checkRateLimit('getUserProfile');
     const params = new URLSearchParams({
       user: user_id,
-      include_labels: 'true',
+      include_labels: 'true'
     });
     const response = await fetch(
       `${slackApi}/users.profile.get?${params}`,
-      { headers: this.botHeaders },
+      { headers: this.botHeaders }
     );
     return response.json();
   }
@@ -344,13 +267,13 @@ export class SlackClient {
     this.checkRateLimit('getUsers');
     const params = new URLSearchParams({
       limit: Math.min(limit, 200).toString(),
-      team_id: process.env.SLACK_TEAM_ID!,
+      team_id: process.env.SLACK_TEAM_ID!
     });
     if (cursor) {
       params.append("cursor", cursor);
     }
     const response = await fetch(`${slackApi}/users.list?${params}`, {
-      headers: this.botHeaders,
+      headers: this.botHeaders
     });
     return response.json();
   }
@@ -364,24 +287,19 @@ export class SlackClient {
    */
   async postMessage(channel_id: string, text: string): Promise<any> {
     this.checkRateLimit('postMessage');
-    const message = await this.resolveMentions(text);
     const response = await fetch(`${slackApi}/chat.postMessage`, {
       method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
-        text: message,
-        unfurl_links: false,
-        unfurl_media: false,
+        link_names: true,
         parse: "full",
-        link_names: false,
-      }),
+        text: text,
+        unfurl_links: false,
+        unfurl_media: false
+      })
     });
-    const result = await response.json();
-    if (!result.ok) {
-      console.error('Slack API error:', result.error);
-    }
-    return result;
+    return await response.json();
   }
 
   /**
@@ -395,15 +313,14 @@ export class SlackClient {
    */
   async postReply(channel_id: string, thread_ts: string, text: string, broadcast: boolean = false): Promise<any> {
     this.checkRateLimit('postReply');
-    const message = await this.resolveMentions(text);
     const body: any = {
       channel: channel_id,
-      thread_ts: thread_ts,
-      text: message,
-      unfurl_links: false,
-      unfurl_media: false,
+      link_names: true,
       parse: "full",
-      link_names: false,
+      text: text,
+      thread_ts: thread_ts,
+      unfurl_links: false,
+      unfurl_media: false
     };
     if (broadcast) {
       body.reply_broadcast = true;
@@ -411,9 +328,21 @@ export class SlackClient {
     const response = await fetch(`${slackApi}/chat.postMessage`, {
       method: 'POST',
       headers: this.botHeaders,
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
     return response.json();
+  }
+
+  /**
+   * Creates a standardized response for tool execution
+   * 
+   * @param {any} response - The response data from Slack API or error message
+   * @param {boolean} stringify - Whether to JSON stringify the response (default: false)
+   * @returns {Object} Standardized response format
+   */
+  response(response: any, stringify: boolean = false): any {
+    const text = stringify ? JSON.stringify(response) : response;
+    return { content: [{ type: 'text', text }] };
   }
 
   /**
@@ -430,7 +359,7 @@ export class SlackClient {
       const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
       return packageJson.version;
     } catch (error) {
-      throw new Error(`Failed to read package.json version: ${error}`);
+      return this.response(`Failed to read package.json version: ${error}`);
     }
   }
 }
