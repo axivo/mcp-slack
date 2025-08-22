@@ -15,7 +15,7 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import slackifyMarkdown from 'slackify-markdown';
-import { SlackClient } from "./client.js";
+import { SlackClient } from './client.js';
 
 interface AddReactionArgs {
   channel_id: string;
@@ -100,7 +100,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Add reaction tool definition
    */
-  private addReaction(): Tool {
+  private addReactionTool(): Tool {
     return {
       name: 'add_reaction',
       description: 'Add a reaction emoji to a message',
@@ -122,7 +122,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Edit message tool definition
    */
-  private editMessage(): Tool {
+  private editMessageTool(): Tool {
     return {
       name: 'edit_message',
       description: 'Edit an existing message in a Slack channel',
@@ -144,7 +144,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Channel history tool definition
    */
-  private getChannelHistory(): Tool {
+  private getChannelHistoryTool(): Tool {
     return {
       name: 'get_channel_history',
       description: 'Get recent messages from a channel',
@@ -160,32 +160,12 @@ export class SlackMcpServer {
   }
 
   /**
-   * Returns all available Slack tools
-   * 
-   * @private
-   * @returns {Tool[]} Array of Slack tool definitions
-   */
-  private getSlackTools(): Tool[] {
-    return [
-      this.listChannels(),
-      this.postMessage(),
-      this.replyToThread(),
-      this.addReaction(),
-      this.editMessage(),
-      this.getChannelHistory(),
-      this.getThreadReplies(),
-      this.getUsers(),
-      this.getUserProfile()
-    ];
-  }
-
-  /**
    * Tool definition for getting thread replies
    * 
    * @private
    * @returns {Tool} Thread replies tool definition
    */
-  private getThreadReplies(): Tool {
+  private getThreadRepliesTool(): Tool {
     return {
       name: 'get_thread_replies',
       description: 'Get all replies in a message thread',
@@ -201,12 +181,32 @@ export class SlackMcpServer {
   }
 
   /**
+   * Returns all available MCP tools
+   * 
+   * @private
+   * @returns {Tool[]} Array of MCP tool definitions
+   */
+  private getTools(): Tool[] {
+    return [
+      this.addReactionTool(),
+      this.editMessageTool(),
+      this.getChannelHistoryTool(),
+      this.getThreadRepliesTool(),
+      this.getUserProfileTool(),
+      this.getUsersTool(),
+      this.listChannelsTool(),
+      this.postMessageTool(),
+      this.replyToThreadTool()
+    ];
+  }
+
+  /**
    * Tool definition for getting detailed user profile information
    * 
    * @private
    * @returns {Tool} User profile tool definition
    */
-  private getUserProfile(): Tool {
+  private getUserProfileTool(): Tool {
     return {
       name: 'get_user_profile',
       description: 'Get detailed profile information for a specific user',
@@ -226,7 +226,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Users list tool definition
    */
-  private getUsers(): Tool {
+  private getUsersTool(): Tool {
     return {
       name: 'get_users',
       description: 'Get a list of all users in the workspace with their basic profile information',
@@ -325,6 +325,12 @@ export class SlackMcpServer {
    */
   private async handleGetUsers(args: GetUsersArgs): Promise<any> {
     const response = await this.client.getUsers(args.limit, args.cursor);
+    if (response.members) {
+      response.members = response.members.map((user: any) => ({
+        ...user,
+        mention: `@${user.name}`
+      }));
+    }
     return response;
   }
 
@@ -338,16 +344,6 @@ export class SlackMcpServer {
   private async handleListChannels(args: ListChannelsArgs): Promise<any> {
     const response = await this.client.getChannels(args.limit, args.cursor);
     return response;
-  }
-
-  /**
-   * Handles tool listing requests from MCP clients
-   * 
-   * @private
-   * @returns {Promise<Object>} Response containing available tools
-   */
-  private async handleListTools(): Promise<any> {
-    return { tools: this.getSlackTools() };
   }
 
   /**
@@ -402,12 +398,22 @@ export class SlackMcpServer {
   }
 
   /**
+   * Handles tool listing requests from MCP clients
+   * 
+   * @private
+   * @returns {Promise<Object>} Response containing available tools
+   */
+  private async handleTools(): Promise<any> {
+    return { tools: this.getTools() };
+  }
+
+  /**
    * Tool definition for listing Slack channels
    * 
    * @private
    * @returns {Tool} List channels tool definition
    */
-  private listChannels(): Tool {
+  private listChannelsTool(): Tool {
     return {
       name: 'list_channels',
       description: 'List public or pre-defined channels in the workspace with pagination',
@@ -427,7 +433,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Post message tool definition
    */
-  private postMessage(): Tool {
+  private postMessageTool(): Tool {
     return {
       name: 'post_message',
       description: 'Post a new message to a Slack channel',
@@ -448,7 +454,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Reply to thread tool definition
    */
-  private replyToThread(): Tool {
+  private replyToThreadTool(): Tool {
     return {
       name: 'reply_to_thread',
       description: 'Reply to a specific message thread in Slack',
@@ -472,7 +478,7 @@ export class SlackMcpServer {
    */
   private setupHandlers(): void {
     this.server.setRequestHandler(CallToolRequestSchema, this.handleRequest.bind(this));
-    this.server.setRequestHandler(ListToolsRequestSchema, this.handleListTools.bind(this));
+    this.server.setRequestHandler(ListToolsRequestSchema, this.handleTools.bind(this));
   }
 
   /**
