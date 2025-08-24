@@ -10,8 +10,6 @@ import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-const slackApi = 'https://slack.com/api';
-
 /**
  * Slack API client
  * 
@@ -21,8 +19,12 @@ const slackApi = 'https://slack.com/api';
  * @class SlackClient
  */
 export class SlackClient {
-  private botHeaders: { Authorization: string; "Content-Type": string };
+  private botHeaders: { Authorization: string; 'Content-Type': string };
   private rateLimiter: Map<string, number> = new Map();
+  private readonly API = 'https://slack.com/api';
+  private readonly MAX_LIMIT_CHANNELS = 200;
+  private readonly MAX_LIMIT_HISTORY = 1000;
+  private readonly MAX_LIMIT_USERS = 200;
   private readonly RATE_LIMIT_MAX_REQUESTS = 60;
   private readonly RATE_LIMIT_WINDOW = 60000;
 
@@ -32,10 +34,7 @@ export class SlackClient {
    * @param {string} botToken - Slack bot token for API authentication
    */
   constructor(botToken: string) {
-    this.botHeaders = {
-      Authorization: `Bearer ${botToken}`,
-      'Content-Type': 'application/json'
-    };
+    this.botHeaders = { Authorization: `Bearer ${botToken}`, 'Content-Type': 'application/json' };
   }
 
   /**
@@ -73,7 +72,7 @@ export class SlackClient {
   async addReaction(channel_id: string, timestamp: string, reaction: string): Promise<any> {
     this.checkRateLimit('addReaction');
     const sanitizedReaction = reaction.replace(/[^a-zA-Z0-9_]/g, '');
-    const response = await fetch(`${slackApi}/reactions.add`, {
+    const response = await fetch(`${this.API}/reactions.add`, {
       method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
@@ -95,13 +94,13 @@ export class SlackClient {
    */
   async editMessage(channel_id: string, timestamp: string, text: string): Promise<any> {
     this.checkRateLimit('editMessage');
-    const response = await fetch(`${slackApi}/chat.update`, {
+    const response = await fetch(`${this.API}/chat.update`, {
       method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
         link_names: true,
-        parse: "full",
+        parse: 'full',
         text: text,
         ts: timestamp,
         unfurl_links: false,
@@ -122,10 +121,10 @@ export class SlackClient {
     this.checkRateLimit('getChannelHistory');
     const params = new URLSearchParams({
       channel: channel_id,
-      limit: Math.min(limit, 1000).toString()
+      limit: Math.min(limit, this.MAX_LIMIT_HISTORY).toString()
     });
     const response = await fetch(
-      `${slackApi}/conversations.history?${params}`,
+      `${this.API}/conversations.history?${params}`,
       { headers: this.botHeaders }
     );
     return response.json();
@@ -143,7 +142,7 @@ export class SlackClient {
       channel: channel_id
     });
     const response = await fetch(
-      `${slackApi}/conversations.info?${params}`,
+      `${this.API}/conversations.info?${params}`,
       { headers: this.botHeaders }
     );
     const result = await response.json();
@@ -164,26 +163,26 @@ export class SlackClient {
       const params = new URLSearchParams({
         types: 'public_channel',
         exclude_archived: 'true',
-        limit: Math.min(limit, 200).toString(),
+        limit: Math.min(limit, this.MAX_LIMIT_CHANNELS).toString(),
         team_id: process.env.SLACK_TEAM_ID!
       });
       if (cursor) {
-        params.append("cursor", cursor);
+        params.append('cursor', cursor);
       }
       const response = await fetch(
-        `${slackApi}/conversations.list?${params}`,
+        `${this.API}/conversations.list?${params}`,
         { headers: this.botHeaders }
       );
       return response.json();
     }
-    const predefinedChannelIdsArray = predefinedChannelIds.split(',').map((id: string) => id.trim());
+    const channelIds = predefinedChannelIds.split(',').map((id: string) => id.trim());
     const channels = [];
-    for (const channelId of predefinedChannelIdsArray) {
+    for (const channelId of channelIds) {
       const params = new URLSearchParams({
         channel: channelId
       });
       const response = await fetch(
-        `${slackApi}/conversations.info?${params}`,
+        `${this.API}/conversations.info?${params}`,
         { headers: this.botHeaders }
       );
       const data = await response.json();
@@ -212,7 +211,7 @@ export class SlackClient {
       ts: thread_ts
     });
     const response = await fetch(
-      `${slackApi}/conversations.replies?${params}`,
+      `${this.API}/conversations.replies?${params}`,
       { headers: this.botHeaders }
     );
     return response.json();
@@ -230,7 +229,7 @@ export class SlackClient {
       user: user_id
     });
     const response = await fetch(
-      `${slackApi}/users.info?${params}`,
+      `${this.API}/users.info?${params}`,
       { headers: this.botHeaders }
     );
     const result = await response.json();
@@ -250,7 +249,7 @@ export class SlackClient {
       include_labels: 'true'
     });
     const response = await fetch(
-      `${slackApi}/users.profile.get?${params}`,
+      `${this.API}/users.profile.get?${params}`,
       { headers: this.botHeaders }
     );
     return response.json();
@@ -266,13 +265,13 @@ export class SlackClient {
   async getUsers(limit: number = 100, cursor?: string): Promise<any> {
     this.checkRateLimit('getUsers');
     const params = new URLSearchParams({
-      limit: Math.min(limit, 200).toString(),
+      limit: Math.min(limit, this.MAX_LIMIT_USERS).toString(),
       team_id: process.env.SLACK_TEAM_ID!
     });
     if (cursor) {
-      params.append("cursor", cursor);
+      params.append('cursor', cursor);
     }
-    const response = await fetch(`${slackApi}/users.list?${params}`, {
+    const response = await fetch(`${this.API}/users.list?${params}`, {
       headers: this.botHeaders
     });
     return response.json();
@@ -287,13 +286,13 @@ export class SlackClient {
    */
   async postMessage(channel_id: string, text: string): Promise<any> {
     this.checkRateLimit('postMessage');
-    const response = await fetch(`${slackApi}/chat.postMessage`, {
+    const response = await fetch(`${this.API}/chat.postMessage`, {
       method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
         link_names: true,
-        parse: "full",
+        parse: 'full',
         text: text,
         unfurl_links: false,
         unfurl_media: false
@@ -316,7 +315,7 @@ export class SlackClient {
     const body: any = {
       channel: channel_id,
       link_names: true,
-      parse: "full",
+      parse: 'full',
       text: text,
       thread_ts: thread_ts,
       unfurl_links: false,
@@ -325,7 +324,7 @@ export class SlackClient {
     if (broadcast) {
       body.reply_broadcast = true;
     }
-    const response = await fetch(`${slackApi}/chat.postMessage`, {
+    const response = await fetch(`${this.API}/chat.postMessage`, {
       method: 'POST',
       headers: this.botHeaders,
       body: JSON.stringify(body)

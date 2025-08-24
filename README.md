@@ -8,9 +8,9 @@ A MCP (Model Context Protocol) server for interacting with Slack.
 
 ### Security Features
 
-- **Markdown Conversion**: Automatically converts GitHub Flavored Markdown to Slack `mrkdwn` format
 - **Link Unfurling Disabled**: Prevents automatic link crawling that could leak sensitive information
 - **Rate Limiting**: Enforces 60 requests per minute per endpoint
+- **Markdown Conversion**: Automatically converts GitHub Flavored Markdown to Slack `mrkdwn` format
 
 ### Slack Setup
 
@@ -69,7 +69,20 @@ Optional variables:
 
 - `SLACK_CHANNEL_IDS` - Comma-separated list of channel IDs to restrict access to specific channels only. If not set, the server can access all public channels the bot has permissions for.
 
-### Tools
+### Prompt Examples
+
+Here are practical examples of how to use the Slack MCP server with natural language prompts:
+
+- "*Mention my name into #general Slack channel and post a project update*"
+- "*Read the last 20 messages from #marketing Slack channel to catch up on discussions*"
+- "*Reply to the latest thread in #support Slack channel with a solution*"
+- "*Add a thumbs up reaction to the latest message in #announcements Slack channel*"
+- "*Get all replies from that long thread about the API changes*"
+- "*Edit my last message in #general Slack channel to fix the typo*"
+- "*List all channels I have access to and find the engineering-related ones*"
+- "*Look up John's profile information and timezone*"
+
+### MCP Tools
 
 1. `add_reaction`
    - Add a reaction emoji to a message

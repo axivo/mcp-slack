@@ -15,7 +15,7 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import slackifyMarkdown from 'slackify-markdown';
-import { SlackClient } from "./client.js";
+import { SlackClient } from './client.js';
 
 interface AddReactionArgs {
   channel_id: string;
@@ -100,7 +100,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Add reaction tool definition
    */
-  private addReaction(): Tool {
+  private addReactionTool(): Tool {
     return {
       name: 'add_reaction',
       description: 'Add a reaction emoji to a message',
@@ -122,7 +122,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Edit message tool definition
    */
-  private editMessage(): Tool {
+  private editMessageTool(): Tool {
     return {
       name: 'edit_message',
       description: 'Edit an existing message in a Slack channel',
@@ -144,7 +144,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Channel history tool definition
    */
-  private getChannelHistory(): Tool {
+  private getChannelHistoryTool(): Tool {
     return {
       name: 'get_channel_history',
       description: 'Get recent messages from a channel',
@@ -152,31 +152,11 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel' },
-          limit: { type: 'number', description: 'Number of messages to retrieve (default 10)', default: 10 }
+          limit: { type: 'number', description: 'Number of messages to retrieve (default: 10)', default: 10 }
         },
         required: ['channel_id']
       }
     };
-  }
-
-  /**
-   * Returns all available Slack tools
-   * 
-   * @private
-   * @returns {Tool[]} Array of Slack tool definitions
-   */
-  private getSlackTools(): Tool[] {
-    return [
-      this.listChannels(),
-      this.postMessage(),
-      this.replyToThread(),
-      this.addReaction(),
-      this.editMessage(),
-      this.getChannelHistory(),
-      this.getThreadReplies(),
-      this.getUsers(),
-      this.getUserProfile()
-    ];
   }
 
   /**
@@ -185,7 +165,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Thread replies tool definition
    */
-  private getThreadReplies(): Tool {
+  private getThreadRepliesTool(): Tool {
     return {
       name: 'get_thread_replies',
       description: 'Get all replies in a message thread',
@@ -193,11 +173,31 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel containing the thread' },
-          thread_ts: { type: 'string', description: 'The timestamp of the parent message in the format `1234567890.123456`, timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it' }
+          thread_ts: { type: 'string', description: 'The timestamp of the parent message (format: 1234567890.123456)' }
         },
         required: ['channel_id', 'thread_ts']
       }
     };
+  }
+
+  /**
+   * Returns all available MCP tools
+   * 
+   * @private
+   * @returns {Tool[]} Array of MCP tool definitions
+   */
+  private getTools(): Tool[] {
+    return [
+      this.addReactionTool(),
+      this.editMessageTool(),
+      this.getChannelHistoryTool(),
+      this.getThreadRepliesTool(),
+      this.getUserProfileTool(),
+      this.getUsersTool(),
+      this.listChannelsTool(),
+      this.postMessageTool(),
+      this.replyToThreadTool()
+    ];
   }
 
   /**
@@ -206,7 +206,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} User profile tool definition
    */
-  private getUserProfile(): Tool {
+  private getUserProfileTool(): Tool {
     return {
       name: 'get_user_profile',
       description: 'Get detailed profile information for a specific user',
@@ -226,7 +226,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Users list tool definition
    */
-  private getUsers(): Tool {
+  private getUsersTool(): Tool {
     return {
       name: 'get_users',
       description: 'Get a list of all users in the workspace with their basic profile information',
@@ -234,7 +234,7 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           cursor: { type: 'string', description: 'Pagination cursor for next page of results' },
-          limit: { type: 'number', description: 'Maximum number of users to return (default 100, max 200)', default: 100 }
+          limit: { type: 'number', description: 'Maximum number of users to return (default: 100, max: 200)', default: 100 }
         }
       }
     };
@@ -266,8 +266,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.timestamp || !args.text) {
       return 'Missing required arguments: channel_id, timestamp, and text';
     }
-    const convertedText = slackifyMarkdown(args.text);
-    const response = await this.client.editMessage(args.channel_id, args.timestamp, convertedText);
+    const text = slackifyMarkdown(args.text);
+    const response = await this.client.editMessage(args.channel_id, args.timestamp, text);
     return response;
   }
 
@@ -325,6 +325,12 @@ export class SlackMcpServer {
    */
   private async handleGetUsers(args: GetUsersArgs): Promise<any> {
     const response = await this.client.getUsers(args.limit, args.cursor);
+    if (response.members) {
+      response.members = response.members.map((user: any) => ({
+        ...user,
+        mention: `@${user.name}`
+      }));
+    }
     return response;
   }
 
@@ -341,16 +347,6 @@ export class SlackMcpServer {
   }
 
   /**
-   * Handles tool listing requests from MCP clients
-   * 
-   * @private
-   * @returns {Promise<Object>} Response containing available tools
-   */
-  private async handleListTools(): Promise<any> {
-    return { tools: this.getSlackTools() };
-  }
-
-  /**
    * Handles post message tool requests
    * 
    * @private
@@ -361,8 +357,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.text) {
       return 'Missing required arguments: channel_id and text';
     }
-    const convertedText = slackifyMarkdown(args.text);
-    const response = await this.client.postMessage(args.channel_id, convertedText);
+    const text = slackifyMarkdown(args.text);
+    const response = await this.client.postMessage(args.channel_id, text);
     return response;
   }
 
@@ -377,8 +373,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.thread_ts || !args.text) {
       return 'Missing required arguments: channel_id, thread_ts, and text';
     }
-    const convertedText = slackifyMarkdown(args.text);
-    const response = await this.client.postReply(args.channel_id, args.thread_ts, convertedText, args.broadcast);
+    const text = slackifyMarkdown(args.text);
+    const response = await this.client.postReply(args.channel_id, args.thread_ts, text, args.broadcast);
     return response;
   }
 
@@ -402,19 +398,29 @@ export class SlackMcpServer {
   }
 
   /**
+   * Handles tool listing requests from MCP clients
+   * 
+   * @private
+   * @returns {Promise<Object>} Response containing available tools
+   */
+  private async handleTools(): Promise<any> {
+    return { tools: this.getTools() };
+  }
+
+  /**
    * Tool definition for listing Slack channels
    * 
    * @private
    * @returns {Tool} List channels tool definition
    */
-  private listChannels(): Tool {
+  private listChannelsTool(): Tool {
     return {
       name: 'list_channels',
       description: 'List public or pre-defined channels in the workspace with pagination',
       inputSchema: {
         type: 'object',
         properties: {
-          limit: { type: 'number', description: 'Maximum number of channels to return (default 100, max 200)', default: 100 },
+          limit: { type: 'number', description: 'Maximum number of channels to return (default: 100, max: 200)', default: 100 },
           cursor: { type: 'string', description: 'Pagination cursor for next page of results' }
         }
       }
@@ -427,7 +433,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Post message tool definition
    */
-  private postMessage(): Tool {
+  private postMessageTool(): Tool {
     return {
       name: 'post_message',
       description: 'Post a new message to a Slack channel',
@@ -448,7 +454,7 @@ export class SlackMcpServer {
    * @private
    * @returns {Tool} Reply to thread tool definition
    */
-  private replyToThread(): Tool {
+  private replyToThreadTool(): Tool {
     return {
       name: 'reply_to_thread',
       description: 'Reply to a specific message thread in Slack',
@@ -456,7 +462,7 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel containing the thread' },
-          thread_ts: { type: 'string', description: 'The timestamp of the parent message in the format \'1234567890.123456\'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it.' },
+          thread_ts: { type: 'string', description: 'The timestamp of the parent message (format: 1234567890.123456)' },
           text: { type: 'string', description: 'The reply text to post' },
           broadcast: { type: 'boolean', description: 'Whether to also send the reply to the main channel (default: false)', default: false }
         },
@@ -472,7 +478,7 @@ export class SlackMcpServer {
    */
   private setupHandlers(): void {
     this.server.setRequestHandler(CallToolRequestSchema, this.handleRequest.bind(this));
-    this.server.setRequestHandler(ListToolsRequestSchema, this.handleListTools.bind(this));
+    this.server.setRequestHandler(ListToolsRequestSchema, this.handleTools.bind(this));
   }
 
   /**
