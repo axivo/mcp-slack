@@ -22,6 +22,9 @@ export class SlackClient {
   private botHeaders: { Authorization: string; 'Content-Type': string };
   private rateLimiter: Map<string, number> = new Map();
   private readonly API = 'https://slack.com/api';
+  private readonly MAX_LIMIT_CHANNELS = 200;
+  private readonly MAX_LIMIT_HISTORY = 1000;
+  private readonly MAX_LIMIT_USERS = 200;
   private readonly RATE_LIMIT_MAX_REQUESTS = 60;
   private readonly RATE_LIMIT_WINDOW = 60000;
 
@@ -118,7 +121,7 @@ export class SlackClient {
     this.checkRateLimit('getChannelHistory');
     const params = new URLSearchParams({
       channel: channel_id,
-      limit: Math.min(limit, 1000).toString()
+      limit: Math.min(limit, this.MAX_LIMIT_HISTORY).toString()
     });
     const response = await fetch(
       `${this.API}/conversations.history?${params}`,
@@ -160,7 +163,7 @@ export class SlackClient {
       const params = new URLSearchParams({
         types: 'public_channel',
         exclude_archived: 'true',
-        limit: Math.min(limit, 200).toString(),
+        limit: Math.min(limit, this.MAX_LIMIT_CHANNELS).toString(),
         team_id: process.env.SLACK_TEAM_ID!
       });
       if (cursor) {
@@ -262,7 +265,7 @@ export class SlackClient {
   async getUsers(limit: number = 100, cursor?: string): Promise<any> {
     this.checkRateLimit('getUsers');
     const params = new URLSearchParams({
-      limit: Math.min(limit, 200).toString(),
+      limit: Math.min(limit, this.MAX_LIMIT_USERS).toString(),
       team_id: process.env.SLACK_TEAM_ID!
     });
     if (cursor) {

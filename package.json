@@ -1,6 +1,6 @@
 {
   "name": "@axivo/mcp-slack",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "description": "MCP server for interacting with Slack",
   "keywords": [

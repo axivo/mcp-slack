@@ -152,7 +152,7 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel' },
-          limit: { type: 'number', description: 'Number of messages to retrieve (default 10)', default: 10 }
+          limit: { type: 'number', description: 'Number of messages to retrieve (default: 10)', default: 10 }
         },
         required: ['channel_id']
       }
@@ -173,7 +173,7 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel containing the thread' },
-          thread_ts: { type: 'string', description: 'The timestamp of the parent message in the format `1234567890.123456`, timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it' }
+          thread_ts: { type: 'string', description: 'The timestamp of the parent message (format: 1234567890.123456)' }
         },
         required: ['channel_id', 'thread_ts']
       }
@@ -234,7 +234,7 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           cursor: { type: 'string', description: 'Pagination cursor for next page of results' },
-          limit: { type: 'number', description: 'Maximum number of users to return (default 100, max 200)', default: 100 }
+          limit: { type: 'number', description: 'Maximum number of users to return (default: 100, max: 200)', default: 100 }
         }
       }
     };
@@ -266,8 +266,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.timestamp || !args.text) {
       return 'Missing required arguments: channel_id, timestamp, and text';
     }
-    const convertedText = slackifyMarkdown(args.text);
-    const response = await this.client.editMessage(args.channel_id, args.timestamp, convertedText);
+    const text = slackifyMarkdown(args.text);
+    const response = await this.client.editMessage(args.channel_id, args.timestamp, text);
     return response;
   }
 
@@ -357,8 +357,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.text) {
       return 'Missing required arguments: channel_id and text';
     }
-    const convertedText = slackifyMarkdown(args.text);
-    const response = await this.client.postMessage(args.channel_id, convertedText);
+    const text = slackifyMarkdown(args.text);
+    const response = await this.client.postMessage(args.channel_id, text);
     return response;
   }
 
@@ -373,8 +373,8 @@ export class SlackMcpServer {
     if (!args.channel_id || !args.thread_ts || !args.text) {
       return 'Missing required arguments: channel_id, thread_ts, and text';
     }
-    const convertedText = slackifyMarkdown(args.text);
-    const response = await this.client.postReply(args.channel_id, args.thread_ts, convertedText, args.broadcast);
+    const text = slackifyMarkdown(args.text);
+    const response = await this.client.postReply(args.channel_id, args.thread_ts, text, args.broadcast);
     return response;
   }
 
@@ -420,7 +420,7 @@ export class SlackMcpServer {
       inputSchema: {
         type: 'object',
         properties: {
-          limit: { type: 'number', description: 'Maximum number of channels to return (default 100, max 200)', default: 100 },
+          limit: { type: 'number', description: 'Maximum number of channels to return (default: 100, max: 200)', default: 100 },
           cursor: { type: 'string', description: 'Pagination cursor for next page of results' }
         }
       }
@@ -462,7 +462,7 @@ export class SlackMcpServer {
         type: 'object',
         properties: {
           channel_id: { type: 'string', description: 'The ID of the channel containing the thread' },
-          thread_ts: { type: 'string', description: 'The timestamp of the parent message in the format \'1234567890.123456\'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it.' },
+          thread_ts: { type: 'string', description: 'The timestamp of the parent message (format: 1234567890.123456)' },
           text: { type: 'string', description: 'The reply text to post' },
           broadcast: { type: 'boolean', description: 'Whether to also send the reply to the main channel (default: false)', default: false }
         },
