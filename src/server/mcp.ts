@@ -15,7 +15,8 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import slackifyMarkdown from 'slackify-markdown';
-import { SlackClient } from './client.js';
+import { Client } from './client.js';
+import { McpTool } from './tool.js';
 
 interface AddReactionArgs {
   channel_id: string;
@@ -68,177 +69,41 @@ interface ReplyToThreadArgs {
 type ToolHandler = (args: any) => Promise<any>;
 
 /**
- * Slack MCP Server implementation
+ * Slack MCP Server implementation bridging Slack API with Model Context Protocol
  * 
- * @class SlackMcpServer
+ * Provides comprehensive interface for Slack workspace operations through MCP tools,
+ * managing API communication, request routing, and response formatting.
+ * 
+ * @class McpServer
  */
-export class SlackMcpServer {
-  private client: SlackClient;
+export class McpServer {
+  private client: Client;
   private server: Server;
+  private tool: McpTool;
   private toolHandlers: Map<string, ToolHandler>;
-  private transport?: StdioServerTransport;
+  private users: number;
 
   /**
-   * Creates a new SlackMcpServer instance
+   * Creates a new McpServer instance with tool setup
+   * 
+   * Initializes client, MCP server, and tool registry.
+   * Sets up handler mappings and prepares for transport connection.
    * 
    * @param {string} botToken - Slack bot token for API authentication
    */
   constructor(botToken: string) {
-    this.client = new SlackClient(botToken);
+    this.client = new Client(botToken);
+    this.users = 100;
     this.server = new Server(
       { name: 'slack', version: this.client.version() },
       { capabilities: { tools: {} } }
     );
+    this.tool = new McpTool(this.users);
     this.toolHandlers = new Map<string, ToolHandler>();
     this.setupToolHandlers();
     this.setupHandlers();
   }
 
-  /**
-   * Tool definition for adding reaction emojis to messages
-   * 
-   * @private
-   * @returns {Tool} Add reaction tool definition
-   */
-  private addReactionTool(): Tool {
-    return {
-      name: 'add_reaction',
-      description: 'Add a reaction emoji to a message',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          channel_id: { type: 'string', description: 'The ID of the channel containing the message' },
-          timestamp: { type: 'string', description: 'The timestamp of the message to react to' },
-          reaction: { type: 'string', description: 'The name of the emoji reaction (without ::)' }
-        },
-        required: ['channel_id', 'timestamp', 'reaction']
-      }
-    };
-  }
-
-  /**
-   * Tool definition for editing existing messages
-   * 
-   * @private
-   * @returns {Tool} Edit message tool definition
-   */
-  private editMessageTool(): Tool {
-    return {
-      name: 'edit_message',
-      description: 'Edit an existing message in a Slack channel',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          channel_id: { type: 'string', description: 'The ID of the channel containing the message' },
-          timestamp: { type: 'string', description: 'The timestamp of the message to edit' },
-          text: { type: 'string', description: 'The message text to edit' }
-        },
-        required: ['channel_id', 'timestamp', 'text']
-      }
-    };
-  }
-
-  /**
-   * Tool definition for retrieving channel message history
-   * 
-   * @private
-   * @returns {Tool} Channel history tool definition
-   */
-  private getChannelHistoryTool(): Tool {
-    return {
-      name: 'get_channel_history',
-      description: 'Get recent messages from a channel',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          channel_id: { type: 'string', description: 'The ID of the channel' },
-          limit: { type: 'number', description: 'Number of messages to retrieve (default: 10)', default: 10 }
-        },
-        required: ['channel_id']
-      }
-    };
-  }
-
-  /**
-   * Tool definition for getting thread replies
-   * 
-   * @private
-   * @returns {Tool} Thread replies tool definition
-   */
-  private getThreadRepliesTool(): Tool {
-    return {
-      name: 'get_thread_replies',
-      description: 'Get all replies in a message thread',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          channel_id: { type: 'string', description: 'The ID of the channel containing the thread' },
-          thread_ts: { type: 'string', description: 'The timestamp of the parent message (format: 1234567890.123456)' }
-        },
-        required: ['channel_id', 'thread_ts']
-      }
-    };
-  }
-
-  /**
-   * Returns all available MCP tools
-   * 
-   * @private
-   * @returns {Tool[]} Array of MCP tool definitions
-   */
-  private getTools(): Tool[] {
-    return [
-      this.addReactionTool(),
-      this.editMessageTool(),
-      this.getChannelHistoryTool(),
-      this.getThreadRepliesTool(),
-      this.getUserProfileTool(),
-      this.getUsersTool(),
-      this.listChannelsTool(),
-      this.postMessageTool(),
-      this.replyToThreadTool()
-    ];
-  }
-
-  /**
-   * Tool definition for getting detailed user profile information
-   * 
-   * @private
-   * @returns {Tool} User profile tool definition
-   */
-  private getUserProfileTool(): Tool {
-    return {
-      name: 'get_user_profile',
-      description: 'Get detailed profile information for a specific user',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          user_id: { type: 'string', description: 'The ID of the user' }
-        },
-        required: ['user_id']
-      }
-    };
-  }
-
-  /**
-   * Tool definition for listing workspace users
-   * 
-   * @private
-   * @returns {Tool} Users list tool definition
-   */
-  private getUsersTool(): Tool {
-    return {
-      name: 'get_users',
-      description: 'Get a list of all users in the workspace with their basic profile information',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          cursor: { type: 'string', description: 'Pagination cursor for next page of results' },
-          limit: { type: 'number', description: 'Maximum number of users to return (default: 100, max: 200)', default: 100 }
-        }
-      }
-    };
-  }
 
   /**
    * Handles add reaction tool requests
@@ -400,75 +265,14 @@ export class SlackMcpServer {
   /**
    * Handles tool listing requests from MCP clients
    * 
-   * @private
-   * @returns {Promise<Object>} Response containing available tools
-   */
-  private async handleTools(): Promise<any> {
-    return { tools: this.getTools() };
-  }
-
-  /**
-   * Tool definition for listing Slack channels
+   * Returns complete list of available MCP tools with their schemas
+   * and descriptions for client capability discovery.
    * 
    * @private
-   * @returns {Tool} List channels tool definition
+   * @returns {Promise<{tools: Tool[]}>} Complete tool registry for MCP protocol
    */
-  private listChannelsTool(): Tool {
-    return {
-      name: 'list_channels',
-      description: 'List public or pre-defined channels in the workspace with pagination',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          limit: { type: 'number', description: 'Maximum number of channels to return (default: 100, max: 200)', default: 100 },
-          cursor: { type: 'string', description: 'Pagination cursor for next page of results' }
-        }
-      }
-    };
-  }
-
-  /**
-   * Tool definition for posting messages to Slack channels
-   * 
-   * @private
-   * @returns {Tool} Post message tool definition
-   */
-  private postMessageTool(): Tool {
-    return {
-      name: 'post_message',
-      description: 'Post a new message to a Slack channel',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          channel_id: { type: 'string', description: 'The ID of the channel to post to' },
-          text: { type: 'string', description: 'The message text to post' }
-        },
-        required: ['channel_id', 'text']
-      }
-    };
-  }
-
-  /**
-   * Tool definition for replying to message threads in Slack
-   * 
-   * @private
-   * @returns {Tool} Reply to thread tool definition
-   */
-  private replyToThreadTool(): Tool {
-    return {
-      name: 'reply_to_thread',
-      description: 'Reply to a specific message thread in Slack',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          channel_id: { type: 'string', description: 'The ID of the channel containing the thread' },
-          thread_ts: { type: 'string', description: 'The timestamp of the parent message (format: 1234567890.123456)' },
-          text: { type: 'string', description: 'The reply text to post' },
-          broadcast: { type: 'boolean', description: 'Whether to also send the reply to the main channel (default: false)', default: false }
-        },
-        required: ['channel_id', 'thread_ts', 'text']
-      }
-    };
+  private async handleTools(): Promise<{ tools: Tool[] }> {
+    return { tools: this.tool.getTools() };
   }
 
   /**
@@ -499,13 +303,15 @@ export class SlackMcpServer {
   }
 
   /**
-   * Connects the MCP server to the specified transport with proper error handling
+   * Connects the MCP server to stdio transport with error handling
    * 
-   * @param {StdioServerTransport} transport - Transport for MCP communication
-   * @returns {Promise<void>} Promise that resolves when connection is established
+   * Establishes MCP communication channel using standard input/output streams,
+   * configures error handling, and starts message processing.
+   * 
+   * @param {StdioServerTransport} transport - Stdio transport for MCP communication
+   * @returns {Promise<void>} Promise that resolves when connection is established and listening
    */
   async connect(transport: StdioServerTransport): Promise<void> {
-    this.transport = transport;
     transport.onerror = () => { };
     await this.server.connect(transport);
   }

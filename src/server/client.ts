@@ -16,9 +16,9 @@ import { fileURLToPath } from 'url';
  * Provides secure Slack API operations with rate limiting, content sanitization,
  * and URL validation for safe workspace interactions.
  * 
- * @class SlackClient
+ * @class Client
  */
-export class SlackClient {
+export class Client {
   private botHeaders: { Authorization: string; 'Content-Type': string };
   private rateLimiter: Map<string, number> = new Map();
   private readonly API = 'https://slack.com/api';
@@ -29,7 +29,7 @@ export class SlackClient {
   private readonly RATE_LIMIT_WINDOW = 60000;
 
   /**
-   * Creates a new SlackClient instance
+   * Creates a new Client instance
    * 
    * @param {string} botToken - Slack bot token for API authentication
    */
