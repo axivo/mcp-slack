@@ -11,12 +11,12 @@
  */
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { SlackMcpServer } from './server/mcp.js';
+import { McpServer } from './server/mcp.js';
 
 /**
  * Main entry point for the Slack MCP Server
  * 
- * Validates environment variables, initializes the SlackMcpServer,
+ * Validates environment variables, initializes the McpServer,
  * and establishes stdio transport for communication with Claude agents.
  * 
  * @async
@@ -47,10 +47,10 @@ async function main(): Promise<void> {
     console.error('Please set SLACK_BOT_TOKEN and SLACK_TEAM_ID environment variables');
     process.exit(1);
   }
-  const slackServer = new SlackMcpServer(botToken);
+  const mcpServer = new McpServer(botToken);
   const transport = new StdioServerTransport();
   try {
-    await slackServer.connect(transport);
+    await mcpServer.connect(transport);
   } catch (error) {
     console.error('Failed to connect MCP transport:', error);
   }
