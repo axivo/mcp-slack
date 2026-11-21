@@ -1,6 +1,6 @@
 {
   "name": "@axivo/mcp-slack",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "type": "module",
   "description": "MCP server for interacting with Slack",
   "keywords": [
@@ -20,23 +20,32 @@
   "bin": {
     "mcp-slack": "dist/index.js"
   },
-  "repository": "github:axivo/mcp-slack",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/axivo/mcp-slack.git"
+  },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.0",
-    "slackify-markdown": "^4.5.0"
+    "@modelcontextprotocol/server": "^2.4.0",
+    "slackify-markdown": "^5.0.0",
+    "zod": "^4.4.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
-    "typescript": ">=5.0.0"
+    "@types/node": "^25.0.0",
+    "typescript": "^6.0.0"
   },
   "engines": {
     "node": ">=24.0.0"
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "main": "index.js",
+  "bugs": {
+    "url": "https://github.com/axivo/mcp-slack/issues"
+  },
+  "homepage": "https://github.com/axivo/mcp-slack"
 }
